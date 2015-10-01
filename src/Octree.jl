@@ -11,7 +11,8 @@ export Cell,
        out_of_bounds,
        count_cells,
        refine_tree,
-       octree_slice!
+       octree_slice!,
+       assign_triangles!
 
 type Cell
   origin::Vector{Float64}
@@ -20,6 +21,7 @@ type Cell
   volume::Float64
   data::Vector{Float64}
   triangles::Vector{Triangle}
+  hasTriangles::Bool
 end
 
 type Block
@@ -32,6 +34,13 @@ type Block
   nx::Float64
   ny::Float64
   nz::Float64
+end
+
+function assign_triangles!(oct, allTriangles)
+  for tri in allTriangles
+      cell = cellContainingPoint(oct, tri.center)
+      push!(cell.triangles, tri)
+  end
 end
 
 function refine_tree(oct)
@@ -53,7 +62,7 @@ function octree_slice_blocks!(oct, coords)
   for child in oct.children
     if child.isLeaf == 1
         for i=1:8
-          if -0.001 < child`.nodes[1,i] < 0.001
+          if -0.001 < child.nodes[1,i] < 0.001
             push!(coords, cell.nodes[2,i])
             push!(coords, cell.nodes[3,i])
           end
@@ -114,7 +123,7 @@ function insert_cells(b::Block)
     for iy = 0:b.ny-1
       for ix = 0:b.nx-1
         cell = Cell(zeros(Float64,3), zeros(Float64,3), zeros(Float64,3,8), 0.0,
-                    zeros(Float64,8), Triangle[])
+                    zeros(Float64,8), Triangle[], false)
 
         cell.origin[1] = 0.5 * lx + ix * lx + b.origin[1] - b.halfSize[1]
         cell.origin[2] = 0.5 * ly + iy * ly + b.origin[2] - b.halfSize[2]
@@ -244,12 +253,4 @@ function triLinearInterpolation(cell::Cell, point::Array{Float64,1})
   return c
 end
 
-function out_of_bounds(oct, r)
-  for i=1:3
-    if (r[i] > oct.halfSize[i]) | (r[i] < -oct.halfSize[i])
-      return true
-    end
-  end
-  return false
-end
 end

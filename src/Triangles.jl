@@ -1,0 +1,90 @@
+type Triangle
+  id::Int64
+  center::Array{Float64,1}
+  centerRot::Array{Float64,1}
+  nodes::Array{Float64,2}
+  nodesRot::Array{Float64,2}
+  area::Float64
+  surfaceNormal::Array{Float64,1}
+  surfaceNormalRot::Array{Float64,1}
+  cos_sza::Float64
+  cos_rza::Float64
+  isVisible::Int64
+  isSunlit::Int64
+end
+
+function calculate_surface_normals(nodeCoords, triIndices, nTriangles)
+
+  n_hat = zeros(Float64, 3, nTriangles)
+  vi = zeros(Float64, 3)
+  vj = zeros(Float64, 3)
+  vk = zeros(Float64, 3)
+
+  for ii=1:nTriangles
+    i = triIndices[1, ii]
+    j = triIndices[2, ii]
+    k = triIndices[3, ii]
+
+    vi = vec(nodeCoords[1:3, i])
+    vj = vec(nodeCoords[1:3, j])
+    vk = vec(nodeCoords[1:3, k])
+    r = cross(vj-vi, vk-vi)
+    r = r/norm(r)
+    for kk = 1:3
+      n_hat[kk, ii] = r[kk]
+    end
+  end
+
+  return n_hat
+
+end
+
+function build_triangles(nodeCoords, triIndices, nTriangles)
+  triangles = zeros(Float64, 3, 3, nTriangles)
+  for i=1:nTriangles
+    for j=1:3
+      for k=1:3
+        triangles[k,j,i] = nodeCoords[k,triIndices[j,i]]
+      end
+    end
+  end
+  return triangles
+end
+
+function calculateTriCenters(triangles, nTriangles)
+  triCenters = zeros(Float64, 3, nTriangles)
+  for i=1:nTriangles
+    for j=1:3
+      triCenters[j,i] = sum(triangles[j,1:3,i])/3.0
+    end
+  end
+  return triCenters
+end
+
+
+function calculateTriAreas(triangles, nTriangles)
+  triAreas = zeros(Float64, nTriangles)
+  for i=1:nTriangles
+    P = vec(triangles[1:3,2,i] - triangles[1:3,1,i])
+    Q = vec(triangles[1:3,3,i] - triangles[1:3,1,i])
+    S = sqrt(sum(cross(P,Q).^2))
+    triAreas[i] = 0.5 * S
+  end
+  return triAreas
+end
+
+function compute_sza(oct, r_hat)
+  for cell in oct.cells
+    for tri in cell.triangles
+      tri.cos_sza = cos(angle_between(r_hat, tri.surfaceNormal))
+    end
+  end
+end
+
+function compute_rza(oct, r_hat)
+  for cell in oct.cells
+    for tri in cell.triangles
+      tri.cos_rza = cos(angle_between(r_hat, tri.surfaceNormal))
+    end
+  end
+end
