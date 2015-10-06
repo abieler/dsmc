@@ -3,10 +3,12 @@ module RayTrace
 export raytrace
 
 function raytrace(oct, r, r_hat)
+  # raytrace through octree from starting point r (x,y,z) unitl line of
+  # sight intersects with a surface element, or the ray gets out of the
+  # simulation box
   dr = zeros(Float64, 3)
   foundCell, cell = traverse_domain(oct, r, r_hat, dr)
-  doesIntersect = intersect(cell.triangles, r_hat, r)
-
+  doesIntersect = intersect(cell.triangles, r_hat, g)
 end
 
 function intersect(triangles, r, p)

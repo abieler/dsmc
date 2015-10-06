@@ -1,16 +1,18 @@
+module Triangles
+
+export Triangle,
+       build_triangles,
+       calculate_surface_normals,
+       calculate_tri_centers,
+       calculate_tri_areas
+
+
 type Triangle
   id::Int64
   center::Array{Float64,1}
-  centerRot::Array{Float64,1}
   nodes::Array{Float64,2}
-  nodesRot::Array{Float64,2}
   area::Float64
   surfaceNormal::Array{Float64,1}
-  surfaceNormalRot::Array{Float64,1}
-  cos_sza::Float64
-  cos_rza::Float64
-  isVisible::Int64
-  isSunlit::Int64
 end
 
 function calculate_surface_normals(nodeCoords, triIndices, nTriangles)
@@ -51,7 +53,7 @@ function build_triangles(nodeCoords, triIndices, nTriangles)
   return triangles
 end
 
-function calculateTriCenters(triangles, nTriangles)
+function calculate_tri_centers(triangles, nTriangles)
   triCenters = zeros(Float64, 3, nTriangles)
   for i=1:nTriangles
     for j=1:3
@@ -62,7 +64,7 @@ function calculateTriCenters(triangles, nTriangles)
 end
 
 
-function calculateTriAreas(triangles, nTriangles)
+function calculate_tri_areas(triangles, nTriangles)
   triAreas = zeros(Float64, nTriangles)
   for i=1:nTriangles
     P = vec(triangles[1:3,2,i] - triangles[1:3,1,i])
@@ -87,4 +89,5 @@ function compute_rza(oct, r_hat)
       tri.cos_rza = cos(angle_between(r_hat, tri.surfaceNormal))
     end
   end
+end
 end
