@@ -48,21 +48,21 @@ end
 
 function save2vtk(oct)
 
-  # 1=0, 2=4, 3=2, 4=6,   5=1, 6=5, 7=3, 8=7
   indexTransform = Dict{Int64, Int64}()
-  indexTransform[0+1] = 0+1
-  indexTransform[1+1] = 4+1
-  indexTransform[2+1] = 3+1
-  indexTransform[3+1] = 7+1
-  indexTransform[4+1] = 1+1
-  indexTransform[5+1] = 5+1
-  indexTransform[6+1] = 2+1
-  indexTransform[7+1] = 6+1
+  indexTransform[1] = 1
+  indexTransform[2] = 5
+  indexTransform[3] = 3
+  indexTransform[4] = 7
+  indexTransform[5] = 2
+  indexTransform[6] = 6
+  indexTransform[7] = 4
+  indexTransform[8] = 8
+
   allCells = Cell[]
   all_cells!(oct, allCells)
   nCells = length(allCells)
   println("nCells: ", nCells)
-  epsilon = 1e-5
+  epsilon = 1e-10
   coord = zeros(Float64,3)
 
   #fill in first coordinate. --> needs to be a non empty list to later be
@@ -116,22 +116,18 @@ function save2vtk(oct)
   end
 
   for i=1:nCells
-    for k=0:7
+    for k=1:8
       allIndexesVTK[k,i] = allIndexes[indexTransform[k],i]
     end
   end
 
-  for i=1:nCells
-    println(allIndexes[:,i])
-  end
-
-
   oFile = open("../output/firstTry.vtk", "w")
-  write(oFile , "# vtk DataFile Version 2.0\n")
+  write(oFile , "# vtk DataFile Version 3.0\n")
   write(oFile, "some mesh\n")
   write(oFile, "ASCII\n")
+  write(oFile, "\n")
   write(oFile, "DATASET UNSTRUCTURED_GRID\n")
-  write(oFile, "POINTS " * string(nUniqueCoords) * " double\n")
+  write(oFile, "POINTS " * string(nUniqueCoords) * " float\n")
   nodeCoords_array = zeros(Float64, 3, length(nodeCoords))
   i=1
   for p in nodeCoords
@@ -143,7 +139,7 @@ function save2vtk(oct)
   end
   write(oFile, "\n")
 
-  write(oFile, "CELLS " * string(nCells) * " " * string(nCells*8) * "\n")
+  write(oFile, "CELLS " * string(nCells) * " " * string(nCells*9) * "\n")
   for i=1:size(allIndexes,2)
     write(oFile, "8 ")
     for k = 1:7
@@ -159,9 +155,6 @@ function save2vtk(oct)
     write(oFile, "11\n")
   end
   close(oFile)
-
-
-  sU.oct2vtk_ug(nodeCoords_array', allIndexesVTK')
 end
 
 function assign_triangles!(oct, allTriangles)
