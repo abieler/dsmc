@@ -7,10 +7,10 @@ include("io.jl")
 nTriangles, allTriangles = load_ply_file("../input/SHAP5_100k.ply")
 
 origin = zeros(Float64, 3)
-halfSize = ones(Float64, 3)*5.0
-nCellsX = 2
-nCellsY = 2
-nCellsZ = 2
+halfSize = ones(Float64, 3)*500*1000
+nCellsX = 5
+nCellsY = 5
+nCellsZ = 5
 isLeaf = 1
 refLevel = 0
 
@@ -19,6 +19,9 @@ oct = Block(origin, halfSize, isLeaf, Array(Block,8), Cell[], refLevel, nCellsX,
 insert_cells(oct)
 
 #split octree into 8 children
-#split_block(oct)
+split_block(oct)
+split_block(oct.children[1])
+split_block(oct.children[1].children[1])
+split_block(oct.children[1].children[1].children[1])
 
 save2vtk(oct)
