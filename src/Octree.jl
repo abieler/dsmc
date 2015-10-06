@@ -167,7 +167,7 @@ end
 function refine_tree(oct)
   for child in oct.children
     if child.isLeaf == 1
-      nCellsMax = 100
+      nCellsMax = 20
       for cell in child.cells
         if length(cell.triangles) > nCellsMax
           split_block(child)
