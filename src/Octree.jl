@@ -1,8 +1,6 @@
 module Octree
 using Triangles
-using PyCall
-
-@pyimport abieler.shapeUtils as sU
+using Gas
 
 export Cell,
        Block,
@@ -16,6 +14,9 @@ export Cell,
        refine_tree,
        octree_slice!,
        assign_triangles!,
+       assign_particles!,
+       time_step,
+       compute_macroscopic_params,
        save2vtk
 
 type Cell
@@ -26,6 +27,7 @@ type Cell
   data::Vector{Float64}
   triangles::Vector{Triangle}
   hasTriangles::Bool
+  particles::Vector{Particle}
 end
 
 type Block
@@ -47,7 +49,7 @@ type Point3D
 end
 
 function save2vtk(oct)
-
+  println("saving simulation domain to disk")
   indexTransform = Dict{Int64, Int64}()
   indexTransform[1] = 1
   indexTransform[2] = 5
@@ -121,7 +123,7 @@ function save2vtk(oct)
     end
   end
 
-  oFile = open("../output/firstTry.vtk", "w")
+  oFile = open("../output/domain.vtk", "w")
   write(oFile , "# vtk DataFile Version 3.0\n")
   write(oFile, "some mesh\n")
   write(oFile, "ASCII\n")
@@ -164,17 +166,27 @@ function assign_triangles!(oct, allTriangles)
   end
 end
 
-function refine_tree(oct)
-  for child in oct.children
-    if child.isLeaf == 1
-      nCellsMax = 20
-      for cell in child.cells
-        if length(cell.triangles) > nCellsMax
-          split_block(child)
-        end
-      end
+function assign_particles!(oct, particles)
+  for p in particles
+      cell = cellContainingPoint(oct, [p.x, p.y, p.z])
+      push!(cell.particles, p)
+  end
+end
+
+function refine(b::Block, nCellsMax)
+  for cell in b.cells
+    if length(cell.triangles) > nCellsMax
+      split_block(b)
+    end
+  end
+end
+
+function refine_tree(oct, nCellsMax=10)
+  for block in oct.children
+    if block.isLeaf == 1
+      refine(block, nCellsMax)
     else
-      refine_tree(child)
+      refine_tree(block)
     end
   end
 end
@@ -261,7 +273,7 @@ function insert_cells(b::Block)
     for iy = 0:b.ny-1
       for ix = 0:b.nx-1
         cell = Cell(zeros(Float64,3), zeros(Float64,3), zeros(Float64,3,8), 0.0,
-                    zeros(Float64,8), Triangle[], false)
+                    zeros(Float64,8), Triangle[], false, Particle[])
 
         cell.origin[1] = 0.5 * lx + ix * lx + b.origin[1] - b.halfSize[1]
         cell.origin[2] = 0.5 * ly + iy * ly + b.origin[2] - b.halfSize[2]
@@ -371,6 +383,40 @@ function cellContainingPoint(oct::Block, point::Array{Float64, 1})
   cellIndex = 1 + fx + fy*nx + fz*nx*ny
   return block.cells[cellIndex]
 
+end
+
+function perform_time_step(b::Block)
+  for cell in b.cells
+    for p in cell.particles
+      move!(p, 0.001)
+    end
+  end
+end
+
+function compute_macroscopic_params(oct)
+  for block in oct.children
+    if block.isLeaf == 1
+      compute_params(block)
+    else
+      compute_macroscopic_params(block)
+    end
+  end
+end
+
+function compute_params(block)
+  for cell in block.cells
+    cell.data[1] = length(cell.particles) / cell.volume
+  end
+end
+
+function time_step(oct)
+  for block in oct.children
+    if block.isLeaf == 1
+      perform_time_step(block)
+    else
+      time_step(block)
+    end
+  end
 end
 
 function triLinearInterpolation(cell::Cell, point::Array{Float64,1})
