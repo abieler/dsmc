@@ -1,2 +1,3 @@
-.vtk
-.vtu
+*.vtk
+*.vtu
+src/oltStuff.jl
