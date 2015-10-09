@@ -3,8 +3,11 @@ Implementation of a 3D Direct Simulation Monte Carlo code in Julia.
 
 Status:
 1. Import triangulated meshes from .ply ascii files.
+
 2. Generate AMR grid around imported mesh (see two figures in doc)
+
 3. Can push gas through simulation domain
+
 4. Can output results to .vtk ascii files which can be read by Paraview.
 
 To Do:
