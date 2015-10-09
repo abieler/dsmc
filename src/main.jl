@@ -29,7 +29,9 @@ for i=1:10
   println(i)
   insert_new_particles(oct)
   compute_macroscopic_params(oct)
-  time_step(oct, lostParticles)
-  assign_particles!(oct, lostParticles)
+  @time time_step(oct, lostParticles)
+  @time assign_particles!(oct, lostParticles)
+  lostParticles = Particle[]
+println("-----")
 end
 save2vtk(oct)

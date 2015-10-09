@@ -426,23 +426,26 @@ end
 
 function perform_time_step(b::Block, lostParticles)
   for cell in b.cells
+    nParticles = length(cell.particles)
     for p in cell.particles
-      move!(p, 0.001)
+      move!(p, 2)
       wasAssigned = assign_particle!(b,p)
       if !wasAssigned
         push!(lostParticles, p)
-        ii = findfirst(cell.particles, p)
-        splice!(cell.particles, ii)
       end
     end
+    splice!(cell.particles, 1:nParticles)
   end
 end
 
 function assign_particles!(oct, particles)
   for p in particles
       foundCell, cell = cellContainingPoint(oct, [p.x, p.y, p.z])
-      push!(cell.particles, p)
+      if foundCell
+        push!(cell.particles, p)
+      end
   end
+  return 0
 end
 
 function assign_particle!(oct, p)

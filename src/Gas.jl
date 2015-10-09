@@ -41,9 +41,9 @@ function insert_new_particles(oct)
   yInit = rand(yMin:0.01:yMax, N)
   zInit = rand(zMin:0.01:zMax, N)
 
-  vxInit = rand(distX, N) .* 4 .- 400
-  vyInit = rand(distY, N) .* 2
-  vzInit = rand(distZ, N) .* 2
+  vxInit = -ones(Float64, N)#rand(0.9:0.01:1.0, N)
+  vyInit = zeros(Float64, N)#rand(distY, N) .* 2
+  vzInit = zeros(Float64, N)#rand(distZ, N) .* 2
   newParticles = Array(Particle, N)
   for i=1:N
     newParticles[i] = Particle(xInit[i], yInit[i], zInit[i],
