@@ -1,6 +1,6 @@
 using Triangles
 
-function load_ply_file(fileName::String)
+function load_ply_file(fileName::AbstractString)
   nNodes::Int64 = 0
   nTriangles::Int64 = 0
   iHeader::Int64 = 0
@@ -9,9 +9,9 @@ function load_ply_file(fileName::String)
   while !eof(iFile)
     line = readline(iFile)
     if contains(line, "element vertex")
-      nNodes = int(split(line, " ")[3])
+      nNodes = parse(Int, split(line, " ")[3])
     elseif contains(line, "element face")
-      nTriangles = int(split(line, " ")[3])
+      nTriangles = parse(Int, split(line, " ")[3])
     elseif contains(line, "end_header")
       iHeader = i
       break
@@ -38,9 +38,9 @@ function load_ply_file(fileName::String)
       nodeCoords[3,i-iHeader] = float(xyz[3])
     elseif i > iHeader+nNodes
       ijk = matchall(r"(\d+)", line)
-      triIndices[1,i-iHeader-nNodes] = int(ijk[2])+1
-      triIndices[2,i-iHeader-nNodes] = int(ijk[3])+1
-      triIndices[3,i-iHeader-nNodes] = int(ijk[4])+1
+      triIndices[1,i-iHeader-nNodes] = parse(Int, ijk[2])+1
+      triIndices[2,i-iHeader-nNodes] = parse(Int, ijk[3])+1
+      triIndices[3,i-iHeader-nNodes] = parse(Int, ijk[4])+1
     end
     i += 1
   end
