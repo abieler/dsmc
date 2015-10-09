@@ -21,12 +21,12 @@ refLevel = 0
 oct = Block(origin, halfSize, isLeaf, Array(Block,8), Cell[], refLevel, nCellsX, nCellsY, nCellsZ)
 #split octree into 8 children
 split_block(oct)
-for i=1:6
+for i=1:7
   assign_triangles!(oct, allTriangles)
   refine_tree(oct)
 end
 
-for i=1:1000
+for i=1:10
   insert_new_particles(oct, myPoint)
   compute_macroscopic_params(oct)
   @time time_step(oct, lostParticles)
