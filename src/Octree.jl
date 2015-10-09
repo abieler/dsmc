@@ -156,21 +156,41 @@ function save2vtk(oct)
   for i=1:nCells
     write(oFile, "11\n")
   end
+
+
+  write(oFile, "\n")
+  write(oFile, "CELL_DATA " * string(nCells) * "\n")
+  write(oFile, "SCALARS density float\n")
+  write(oFile, "LOOKUP_TABLE default\n")
+
+  for i=1:nCells
+    write(oFile, string(allCells[i].data[1]) * "\n")
+  end
   close(oFile)
 end
 
 function assign_triangles!(oct, allTriangles)
   for tri in allTriangles
-      cell = cellContainingPoint(oct, tri.center)
+      foundCell, cell = cellContainingPoint(oct, tri.center)
       push!(cell.triangles, tri)
   end
 end
 
 function assign_particles!(oct, particles)
   for p in particles
-      cell = cellContainingPoint(oct, [p.x, p.y, p.z])
+      foundCell, cell = cellContainingPoint(oct, [p.x, p.y, p.z])
       push!(cell.particles, p)
   end
+end
+
+function assign_particle!(oct, p, lostParticles)
+    foundCell, cell = cellContainingPoint(oct, [p.x, p.y, p.z])
+    if foundCell
+      push!(cell.particles, p)
+    else
+      push!(lostParticles, p)
+    end
+    return 0
 end
 
 function refine(b::Block, nCellsMax)
@@ -269,10 +289,11 @@ function insert_cells(b::Block)
   lx = b.halfSize[1]*2/b.nx
   ly = b.halfSize[2]*2/b.ny
   lz = b.halfSize[3]*2/b.nz
+  volume = lx*ly*lz
   for iz = 0:b.nz-1
     for iy = 0:b.ny-1
       for ix = 0:b.nx-1
-        cell = Cell(zeros(Float64,3), zeros(Float64,3), zeros(Float64,3,8), 0.0,
+        cell = Cell(zeros(Float64,3), zeros(Float64,3), zeros(Float64,3,8), volume,
                     zeros(Float64,8), Triangle[], false, Particle[])
 
         cell.origin[1] = 0.5 * lx + ix * lx + b.origin[1] - b.halfSize[1]
@@ -381,16 +402,12 @@ function cellContainingPoint(oct::Block, point::Array{Float64, 1})
   end
 
   cellIndex = 1 + fx + fy*nx + fz*nx*ny
-  return block.cells[cellIndex]
-
-end
-
-function perform_time_step(b::Block)
-  for cell in b.cells
-    for p in cell.particles
-      move!(p, 0.001)
-    end
+  if cellIndex > nx*ny*nz
+    return false, block.cells[1]
+  else
+    return true, block.cells[cellIndex]
   end
+
 end
 
 function compute_macroscopic_params(oct)
@@ -405,19 +422,33 @@ end
 
 function compute_params(block)
   for cell in block.cells
-    cell.data[1] = length(cell.particles) / cell.volume
+    density = (length(cell.particles)) / cell.volume
+    if isnan(density)
+      density = 0.0
+    end
+    cell.data[1] = density
   end
 end
 
-function time_step(oct)
+function time_step(oct, lostParticles)
   for block in oct.children
     if block.isLeaf == 1
-      perform_time_step(block)
+      perform_time_step(block, lostParticles)
     else
-      time_step(block)
+      time_step(block, lostParticles)
     end
   end
 end
+
+function perform_time_step(b::Block, lostParticles)
+  for cell in b.cells
+    for p in cell.particles
+      move!(p, 0.001)
+      assign_particle!(b,p, lostParticles)
+    end
+  end
+end
+
 
 function triLinearInterpolation(cell::Cell, point::Array{Float64,1})
 

@@ -30,13 +30,20 @@ end
 
 function insert_new_particles(oct)
   N = 200
-  xInit = rand(oct.origin[1]-oct.halfSize[1]:0.01:oct.origin[1]+oct.halfSize[1], N)
-  yInit = rand(oct.origin[2]-oct.halfSize[2]:0.01:oct.origin[2]+oct.halfSize[2], N)
-  zInit = rand(oct.origin[3]-oct.halfSize[3]:0.01:oct.origin[3]+oct.halfSize[3], N)
+  xMin = 19.5
+  xMax = 19.9
+  yMin = -5
+  yMax = 5
+  zMin = -5
+  zMax = 5
 
-  vxInit = rand(distX, N) * 4
-  vyInit = rand(distY, N) .+ 300
-  vzInit = rand(distZ, N) * 4
+  xInit = rand(xMin:0.01:xMax, N)
+  yInit = rand(yMin:0.01:yMax, N)
+  zInit = rand(zMin:0.01:zMax, N)
+
+  vxInit = rand(distX, N) .* 4 .- 400
+  vyInit = rand(distY, N) .* 2
+  vzInit = rand(distZ, N) .* 2
   newParticles = Array(Particle, N)
   for i=1:N
     newParticles[i] = Particle(xInit[i], yInit[i], zInit[i],
@@ -44,6 +51,7 @@ function insert_new_particles(oct)
                  18.0, 1.0)
   end
 
+  println("assigning particles")
   assign_particles!(oct, newParticles)
 end
 

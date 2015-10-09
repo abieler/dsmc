@@ -4,7 +4,6 @@ using Gas
 
 include("io.jl")
 
-#nTriangles, nodeCoords, triIndices, triangles, n_hat, triCenters, triAreas
 nTriangles, allTriangles = load_ply_file("../input/cow.ply")
 
 origin = zeros(Float64, 3)
@@ -19,12 +18,12 @@ refLevel = 0
 oct = Block(origin, halfSize, isLeaf, Array(Block,8), Cell[], refLevel, nCellsX, nCellsY, nCellsZ)
 #split octree into 8 children
 split_block(oct)
-for i=1:9
+for i=1:5
   assign_triangles!(oct, allTriangles)
   refine_tree(oct)
 end
 
-for i=1:10
+for i=1:20
   println(i)
   insert_new_particles(oct)
   compute_macroscopic_params(oct)
