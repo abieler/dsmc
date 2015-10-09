@@ -2,6 +2,7 @@
 Implementation of a 3D Direct Simulation Monte Carlo code in Julia.
 
 Status:
+
 1. Import triangulated meshes from .ply ascii files.
 
 2. Generate AMR grid around imported mesh (see two figures in doc)
