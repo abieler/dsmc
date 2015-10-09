@@ -176,22 +176,6 @@ function assign_triangles!(oct, allTriangles)
   end
 end
 
-function assign_particles!(oct, particles)
-  for p in particles
-      foundCell, cell = cellContainingPoint(oct, [p.x, p.y, p.z])
-      push!(cell.particles, p)
-  end
-end
-
-function assign_particle!(oct, p, lostParticles)
-    foundCell, cell = cellContainingPoint(oct, [p.x, p.y, p.z])
-    if foundCell
-      push!(cell.particles, p)
-    else
-      push!(lostParticles, p)
-    end
-    return 0
-end
 
 function refine(b::Block, nCellsMax)
   for cell in b.cells
@@ -402,7 +386,7 @@ function cellContainingPoint(oct::Block, point::Array{Float64, 1})
   end
 
   cellIndex = 1 + fx + fy*nx + fz*nx*ny
-  if cellIndex > nx*ny*nz
+  if ((cellIndex > nx*ny*nz) | (cellIndex < 1))
     return false, block.cells[1]
   else
     return true, block.cells[cellIndex]
@@ -444,9 +428,31 @@ function perform_time_step(b::Block, lostParticles)
   for cell in b.cells
     for p in cell.particles
       move!(p, 0.001)
-      assign_particle!(b,p, lostParticles)
+      wasAssigned = assign_particle!(b,p)
+      if !wasAssigned
+        push!(lostParticles, p)
+        ii = findfirst(cell.particles, p)
+        splice!(cell.particles, ii)
+      end
     end
   end
+end
+
+function assign_particles!(oct, particles)
+  for p in particles
+      foundCell, cell = cellContainingPoint(oct, [p.x, p.y, p.z])
+      push!(cell.particles, p)
+  end
+end
+
+function assign_particle!(oct, p)
+    foundCell, cell = cellContainingPoint(oct, [p.x, p.y, p.z])
+    if foundCell
+      push!(cell.particles, p)
+      return true
+    else
+      return false
+    end
 end
 
 

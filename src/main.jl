@@ -4,6 +4,8 @@ using Gas
 
 include("io.jl")
 
+lostParticles = Particle[]
+
 nTriangles, allTriangles = load_ply_file("../input/cow.ply")
 
 origin = zeros(Float64, 3)
@@ -23,10 +25,11 @@ for i=1:5
   refine_tree(oct)
 end
 
-for i=1:20
+for i=1:10
   println(i)
   insert_new_particles(oct)
   compute_macroscopic_params(oct)
-  time_step(oct)
+  time_step(oct, lostParticles)
+  assign_particles!(oct, lostParticles)
 end
 save2vtk(oct)
