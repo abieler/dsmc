@@ -100,13 +100,5 @@ function traverse_domain(oct::Block, r, r_hat, dr)
     end
 end
 
-function out_of_bounds(oct, r)
-  for i=1:3
-    if (r[i] > oct.halfSize[i]) | (r[i] < -oct.halfSize[i])
-      return true
-    end
-  end
-  return false
-end
 
 end

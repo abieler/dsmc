@@ -28,8 +28,8 @@ function move!(p::Particle, dt)
   p.z = p.z + dt * p.vz
 end
 
-function insert_new_particles(oct)
-  N = 200
+function insert_new_particles(oct, coords)
+  N = 100
   xMin = 19.5
   xMax = 19.9
   yMin = -5
@@ -41,9 +41,9 @@ function insert_new_particles(oct)
   yInit = rand(yMin:0.01:yMax, N)
   zInit = rand(zMin:0.01:zMax, N)
 
-  vxInit = -ones(Float64, N)#rand(0.9:0.01:1.0, N)
-  vyInit = zeros(Float64, N)#rand(distY, N) .* 2
-  vzInit = zeros(Float64, N)#rand(distZ, N) .* 2
+  vxInit = -ones(Float64, N)
+  vyInit = zeros(Float64, N)
+  vzInit = zeros(Float64, N)
   newParticles = Array(Particle, N)
   for i=1:N
     newParticles[i] = Particle(xInit[i], yInit[i], zInit[i],
@@ -51,8 +51,7 @@ function insert_new_particles(oct)
                  18.0, 1.0)
   end
 
-  println("assigning particles")
-  assign_particles!(oct, newParticles)
+  assign_particles!(oct, newParticles, coords)
 end
 
 end

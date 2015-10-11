@@ -5,6 +5,7 @@ using Gas
 include("io.jl")
 
 lostParticles = Particle[]
+myPoint = zeros(Float64,3)
 
 nTriangles, allTriangles = load_ply_file("../input/cow.ply")
 
@@ -20,18 +21,17 @@ refLevel = 0
 oct = Block(origin, halfSize, isLeaf, Array(Block,8), Cell[], refLevel, nCellsX, nCellsY, nCellsZ)
 #split octree into 8 children
 split_block(oct)
-for i=1:5
+for i=1:7
   assign_triangles!(oct, allTriangles)
   refine_tree(oct)
 end
 
 for i=1:10
-  println(i)
-  insert_new_particles(oct)
+  insert_new_particles(oct, myPoint)
   compute_macroscopic_params(oct)
   @time time_step(oct, lostParticles)
-  @time assign_particles!(oct, lostParticles)
+  @time assign_particles!(oct, lostParticles, myPoint)
   lostParticles = Particle[]
-println("-----")
+  println(i)
 end
 save2vtk(oct)

@@ -17,6 +17,7 @@ export Cell,
        assign_particles!,
        time_step,
        compute_macroscopic_params,
+       allCellsWithParticles,
        save2vtk
 
 type Cell
@@ -336,6 +337,7 @@ function split_block(b::Block)
 end
 
 function getOctantContainingPoint(point::Array{Float64,1}, block::Block)
+  if !is_out_of_bounds(block, point)
     octant::Int64 = 1
     if (point[1] >= block.origin[1])
       octant += 4
@@ -346,52 +348,74 @@ function getOctantContainingPoint(point::Array{Float64,1}, block::Block)
     if (point[3] >= block.origin[3])
       octant += 1
     end
-  return octant
+    return octant
+  else
+    return -1
+  end
 end
 
 function blockContainingPoint(block::Block, point::Array{Float64,1})
   if (block.isLeaf == 0)
     oct = getOctantContainingPoint(point, block)
+    if oct == -1
+      return false, block
+    end
     blockContainingPoint(block.children[oct], point)
   elseif (block.isLeaf == 1)
-    return block
+    if !is_out_of_bounds(block, point)
+      return true, block
+    else
+      return false, block
+    end
   end
 end
 
 function cellContainingPoint(oct::Block, point::Array{Float64, 1})
-  block = blockContainingPoint(oct, point)
-  nx = block.nx
-  ny = block.ny
-  nz = block.nz
-  x = point[1] - block.cells[1].nodes[1,1]
-  y = point[2] - block.cells[1].nodes[2,1]
-  z = point[3] - block.cells[1].nodes[3,1]
+  foundBlock, block = blockContainingPoint(oct, point)
+  if foundBlock
+    nx = block.nx
+    ny = block.ny
+    nz = block.nz
+    x = point[1] - block.cells[1].nodes[1,1]
+    y = point[2] - block.cells[1].nodes[2,1]
+    z = point[3] - block.cells[1].nodes[3,1]
 
-  lx = block.halfSize[1] * 2.0 / nx
-  ly = block.halfSize[2] * 2.0 / ny
-  lz = block.halfSize[3] * 2.0 / nz
+    lx = block.halfSize[1] * 2.0 / nx
+    ly = block.halfSize[2] * 2.0 / ny
+    lz = block.halfSize[3] * 2.0 / nz
 
-  fx = fld(x, lx)
-  fy = fld(y, ly)
-  fz = fld(z, lz)
+    fx = fld(x, lx)
+    fy = fld(y, ly)
+    fz = fld(z, lz)
 
-  if fx > (nx-1.0)
-      fx = nx - 1.0
-  end
-  if fy > (ny-1.0)
-      fy = ny - 1.0
-  end
-  if fz > (nz-1.0)
-      fz = nz - 1.0
-  end
+    if fx > (nx-1.0)
+        fx = nx - 1.0
+    end
+    if fy > (ny-1.0)
+        fy = ny - 1.0
+    end
+    if fz > (nz-1.0)
+        fz = nz - 1.0
+    end
 
-  cellIndex = 1 + fx + fy*nx + fz*nx*ny
-  if ((cellIndex > nx*ny*nz) | (cellIndex < 1))
-    return false, block.cells[1]
-  else
+    cellIndex = round(Int, 1 + fx + fy*nx + fz*nx*ny)
     return true, block.cells[cellIndex]
+  else
+    return false, block.cells[1]
   end
 
+end
+
+function allCellsWithParticles(oct)
+  for block in oct.children
+    if block.isLeaf == 1
+      for cell in block.cells
+        if length(cell.particles) > 0
+          println("cellWithParticle: ", cell.origin)
+        end
+      end
+    end
+  end
 end
 
 function compute_macroscopic_params(oct)
@@ -406,7 +430,7 @@ end
 
 function compute_params(block)
   for cell in block.cells
-    density = (length(cell.particles)) / cell.volume
+    density = length(cell.particles)/cell.volume
     if isnan(density)
       density = 0.0
     end
@@ -427,23 +451,31 @@ end
 function perform_time_step(b::Block, lostParticles)
   for cell in b.cells
     nParticles = length(cell.particles)
-    for p in cell.particles
-      move!(p, 2)
-      wasAssigned = assign_particle!(b,p)
-      if !wasAssigned
-        push!(lostParticles, p)
+    if nParticles > 0
+      for p in copy(cell.particles)
+        move!(p, 0.01)
+        wasAssigned = assign_particle!(b, p)
+        if !wasAssigned
+          push!(lostParticles, p)
+        end
       end
+      splice!(cell.particles, 1:nParticles)
     end
-    splice!(cell.particles, 1:nParticles)
   end
 end
 
-function assign_particles!(oct, particles)
+function assign_particles!(oct, particles, coords)
   for p in particles
-      foundCell, cell = cellContainingPoint(oct, [p.x, p.y, p.z])
+    coords[1] = p.x
+    coords[2] = p.y
+    coords[3] = p.z
+    if !is_out_of_bounds(oct, coords)
+      foundCell, cell = cellContainingPoint(oct, coords)
       if foundCell
         push!(cell.particles, p)
       end
+    end
+
   end
   return 0
 end
@@ -476,6 +508,15 @@ function triLinearInterpolation(cell::Cell, point::Array{Float64,1})
   c = c0*(1-yd) + c1*yd
 
   return c
+end
+
+function is_out_of_bounds(oct, r)
+  for i=1:3
+    if ((r[i] > (oct.origin[i] + oct.halfSize[i])) | (r[i] < (oct.origin[i]-oct.halfSize[i])))
+      return true
+    end
+  end
+  return false
 end
 
 end
