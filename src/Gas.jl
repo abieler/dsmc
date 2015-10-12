@@ -80,12 +80,13 @@ function time_step(oct, lostParticles)
 end
 
 function perform_time_step(b::Block, lostParticles)
+  coords = zeros(Float64, 3)
   for cell in b.cells
     nParticles = length(cell.particles)
     if nParticles > 0
       for p in copy(cell.particles)
         move!(p, 0.01)
-        wasAssigned = assign_particle!(b, p)
+        wasAssigned = assign_particle!(b, p, coords)
         if !wasAssigned
           push!(lostParticles, p)
         end
@@ -111,8 +112,11 @@ function assign_particles!(oct, particles, coords)
   return 0
 end
 
-function assign_particle!(oct, p)
-    foundCell, cell = cellContainingPoint(oct, [p.x, p.y, p.z])
+function assign_particle!(oct, p, coords)
+    coords[1] = p.x
+    coords[2] = p.y
+    coords[3] = p.z
+    foundCell, cell = cellContainingPoint(oct, coords)
     if foundCell
       push!(cell.particles, p)
       return true
