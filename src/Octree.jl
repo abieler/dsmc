@@ -65,48 +65,6 @@ function refine_tree(oct, nCellsMax=10)
   end
 end
 
-function octree_slice_blocks!(oct, coords)
-  for child in oct.children
-    if child.isLeaf == 1
-        for i=1:8
-          if -0.001 < child.nodes[1,i] < 0.001
-            push!(coords, cell.nodes[2,i])
-            push!(coords, cell.nodes[3,i])
-          end
-        end
-    else
-      octree_slice!(child, coords)
-    end
-  end
-end
-
-function octree_slice!(oct, coords)
-  for child in oct.children
-    if child.isLeaf == 1
-      for cell in child.cells
-        for i=1:8
-          if -0.001 < cell.nodes[1,i] < 0.001
-            push!(coords, cell.nodes[2,i])
-            push!(coords, cell.nodes[3,i])
-          end
-        end
-      end
-    else
-      octree_slice!(child, coords)
-    end
-  end
-end
-
-function populate_blocks(block::Block)
-  for child in block.children
-    if child.isLeaf == 1
-      insert_cells(child)
-    else
-      populate_blocks(child)
-    end
-  end
-end
-
 function count_cells(block::Block)
   for child in block.children
     if child.isLeaf == 1
@@ -274,19 +232,6 @@ function cellContainingPoint(oct::Block, point::Array{Float64, 1})
   end
 
 end
-
-function allCellsWithParticles(oct)
-  for block in oct.children
-    if block.isLeaf == 1
-      for cell in block.cells
-        if length(cell.particles) > 0
-          println("cellWithParticle: ", cell.origin)
-        end
-      end
-    end
-  end
-end
-
 
 function triLinearInterpolation(cell::Cell, point::Array{Float64,1})
 
