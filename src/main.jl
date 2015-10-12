@@ -21,7 +21,7 @@ refLevel = 0
 oct = Block(origin, halfSize, isLeaf, Array(Block,8), Cell[], refLevel, nCellsX, nCellsY, nCellsZ)
 #split octree into 8 children
 split_block(oct)
-for i=1:7
+for i=1:3
   assign_triangles!(oct, allTriangles)
   refine_tree(oct)
 end
