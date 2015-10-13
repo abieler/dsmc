@@ -1,11 +1,9 @@
 module Octree
 using Triangles
-using GasParticle
+using Types
+using RayTrace
 
-export Cell,
-       Block,
-       Point3D,
-       split_block,
+export split_block,
        insert_cells,
        blockContainingPoint,
        cellContainingPoint,
@@ -16,35 +14,63 @@ export Cell,
        octree_slice!,
        allCellsWithParticles,
        all_cells!,
-       is_out_of_bounds
+       is_out_of_bounds,
+       cut_cell_volume!
 
-type Cell
-  origin::Vector{Float64}
-  halfSize::Vector{Float64}
-  nodes::Array{Float64,2}
-  volume::Float64
-  data::Vector{Float64}
-  triangles::Vector{Triangle}
-  hasTriangles::Bool
-  particles::Vector{Particle}
-end
+function cut_cell_volume!(oct, pStart, N)
+  pRandom = zeros(Float64, 3)
+  vRandom = zeros(Float64, 3)
+  r = zeros(Float64, 3)
+  for block in oct.children
+    if (block.isLeaf == 1)
+      for cell in block.cells
+        if cell.hasTriangles
+          xMin = cell.origin[1] - cell.halfSize[1]
+          xMax = cell.origin[1] + cell.halfSize[1]
+          yMin = cell.origin[2] - cell.halfSize[2]
+          yMax = cell.origin[2] + cell.halfSize[2]
+          zMin = cell.origin[3] - cell.halfSize[3]
+          zMax = cell.origin[3] + cell.halfSize[3]
+          dx = (xMax - xMin) / 1000.0
+          dy = (yMax - yMin) / 1000.0
+          dz = (zMax - zMin) / 1000.0
 
-type Block
-  origin::Vector{Float64}
-  halfSize::Vector{Float64}
-  isLeaf::Int64
-  children::Vector{Block}
-  cells::Vector{Cell}
-  nestingLevel::Int64
-  nx::Int64
-  ny::Int64
-  nz::Int64
-end
+          counter = 0
+          x = rand(xMin:dx:xMax,N)
+          y = rand(yMin:dy:yMax,N)
+          z = rand(zMin:dz:zMax,N)
 
-type Point3D
-  x::Float64
-  y::Float64
-  z::Float64
+          nInside = 0
+          nOutside = 0
+          for i=1:N
+            pRandom[1] = x[i]
+            pRandom[2] = y[i]
+            pRandom[3] = z[i]
+            for k=1:3
+              r[k] = pRandom[k] - pStart[k]
+            end
+            r = r / norm(r)
+            counter = intersect(cell.triangles, r, pStart, pRandom, vRandom)
+            if (counter % 2) == 1
+              nInside += 1
+            else
+              nOutside += 1
+            end
+          end
+          if nInside !== 0
+            cell.volume *= (nOutside/(nOutside+nInside))
+          end
+
+          #println("nInside: ", nInside)
+          #println("nOutside: ", nOutside)
+          #readline(STDIN)
+        end
+      end
+    else
+      cut_cell_volume!(block, pStart, N)
+    end
+  end
+
 end
 
 function refine(b::Block, nCellsMax)

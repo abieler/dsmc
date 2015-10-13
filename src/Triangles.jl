@@ -20,7 +20,10 @@ end
 function assign_triangles!(oct, allTriangles)
   for tri in allTriangles
       foundCell, cell = cellContainingPoint(oct, tri.center)
-      push!(cell.triangles, tri)
+      if foundCell
+        push!(cell.triangles, tri)
+        cell.hasTriangles = true
+      end
   end
 end
 

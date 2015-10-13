@@ -1,6 +1,7 @@
 using Octree
 using Triangles
 using Gas
+using Types
 
 include("io.jl")
 
@@ -21,17 +22,20 @@ refLevel = 0
 oct = Block(origin, halfSize, isLeaf, Array(Block,8), Cell[], refLevel, nCellsX, nCellsY, nCellsZ)
 #split octree into 8 children
 split_block(oct)
-for i=1:3
-  assign_triangles!(oct, allTriangles)
+assign_triangles!(oct, allTriangles)
+for i=1:5
   refine_tree(oct)
+  assign_triangles!(oct, allTriangles)
 end
+pStart = [18.0, 0.0, 0.0]
+@time cut_cell_volume!(oct, pStart, 2000)
 
-for i=1:10
+for i=1:1
   insert_new_particles(oct, myPoint)
   compute_macroscopic_params(oct)
-  @time time_step(oct, lostParticles)
-  @time assign_particles!(oct, lostParticles, myPoint)
+  time_step(oct, lostParticles)
+  assign_particles!(oct, lostParticles, myPoint)
   lostParticles = Particle[]
-  println(i)
+  #println(i)
 end
 save2vtk(oct)

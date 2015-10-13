@@ -1,6 +1,9 @@
 module RayTrace
 
-export raytrace
+using Types
+
+export raytrace,
+       intersect
 
 function raytrace(oct, r, r_hat)
   # raytrace through octree from starting point r (x,y,z) unitl line of
@@ -11,9 +14,9 @@ function raytrace(oct, r, r_hat)
   doesIntersect = intersect(cell.triangles, r_hat, g)
 end
 
-function intersect(triangles, r, p)
-
+function intersect(triangles, r, p, pRandom, vRandom)
   nTriangles = length(triangles)
+  #println("start intersect for ", nTriangles, " triangles")
   i = 0
   j = 0
   k = 0
@@ -36,6 +39,12 @@ function intersect(triangles, r, p)
   u = [0.,0.,0.]
   v = [0.,0.,0.]
   w = [0.,0.,0.]
+
+  for i=1:3
+    vRandom[i] = p[i] - pRandom[i]
+  end
+  lRandom = norm(vRandom)
+  counter = 0
 
   for i=1:nTriangles
     a = 0.0
@@ -65,20 +74,32 @@ function intersect(triangles, r, p)
           @inbounds dot_wu = dot_wu + w[k]*u[k]
           @inbounds dot_wv = dot_wv + w[k]*v[k]
         end
+        lIntersect = norm(pI .- p)
+        #println("tri.center: ", triangles[i].center)
+        #println("pRandom: ", p)
+        #println("pI: ", pI)
+        #println("lRandom: ", lRandom)
+        #println("lIntersect: ", lIntersect)
+
+        if lIntersect > lRandom
+          #println("not intersected")
+          continue
+        end
 
         divisor = dot_uv*dot_uv - dot_uu * dot_vv
         sI = (dot_uv*dot_wv - dot_vv*dot_wu) / divisor
         tI = (dot_uv*dot_wu - dot_uu*dot_wv) / divisor
 
         if ((tI >= 0.0) && (sI >= 0.0) && (sI + tI < 1.0))
-          return true
+          counter += 1
+          #println("counter += 1")
+          continue
         end
+        #println()
       end
-
     end
   end
-  return false
-
+  return counter
 end
 
 function traverse_domain(oct::Block, r, r_hat, dr)
@@ -98,6 +119,7 @@ function traverse_domain(oct::Block, r, r_hat, dr)
       dr[k] = cell.halfSize[k] * r_hat[k]
       r[k] = r[k] + dr[k]
     end
+  end
 end
 
 
