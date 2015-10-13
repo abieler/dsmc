@@ -3,7 +3,7 @@ module RayTrace
 using Types
 
 export raytrace,
-       intersect
+       nTrianglesIntersects
 
 function raytrace(oct, r, r_hat)
   # raytrace through octree from starting point r (x,y,z) unitl line of
@@ -14,7 +14,7 @@ function raytrace(oct, r, r_hat)
   doesIntersect = intersect(cell.triangles, r_hat, g)
 end
 
-function intersect(triangles, r, p, pRandom, vRandom)
+function nTrianglesIntersects(triangles, r, p, pRandom, vRandom)
   nTriangles = length(triangles)
   #println("start intersect for ", nTriangles, " triangles")
   i = 0

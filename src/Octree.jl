@@ -22,7 +22,7 @@ function cut_cell_volume!(oct, pStart, N)
   vRandom = zeros(Float64, 3)
   r = zeros(Float64, 3)
   for block in oct.children
-    if (block.isLeaf == 1)
+    if block.isLeaf
       for cell in block.cells
         if cell.hasTriangles
           xMin = cell.origin[1] - cell.halfSize[1]
@@ -50,7 +50,7 @@ function cut_cell_volume!(oct, pStart, N)
               r[k] = pRandom[k] - pStart[k]
             end
             r = r / norm(r)
-            counter = intersect(cell.triangles, r, pStart, pRandom, vRandom)
+            counter = nTrianglesIntersects(cell.triangles, r, pStart, pRandom, vRandom)
             if (counter % 2) == 1
               nInside += 1
             else
@@ -83,7 +83,7 @@ end
 
 function refine_tree(oct, nCellsMax=10)
   for block in oct.children
-    if block.isLeaf == 1
+    if block.isLeaf
       refine(block, nCellsMax)
     else
       refine_tree(block)
@@ -93,7 +93,7 @@ end
 
 function count_cells(block::Block)
   for child in block.children
-    if child.isLeaf == 1
+    if child.isLeaf
       for cell in child.cells
         if length(cell.triangles) > 0
           println("triangles in cell: ", length(cell.triangles))
@@ -106,9 +106,9 @@ function count_cells(block::Block)
 end
 
 function all_cells!(block::Block, allCells::Vector{Cell})
-  if block.isLeaf == 0
+  if !block.isLeaf
     for child in block.children
-      if child.isLeaf == 1
+      if child.isLeaf
         for cell in child.cells
           push!(allCells, cell)
         end
@@ -160,7 +160,7 @@ function insert_cells(b::Block)
 end
 
 function split_block(b::Block)
-  if b.isLeaf == 0
+  if !b.isLeaf
     b.cells = Cell[]
   end
 
@@ -173,15 +173,15 @@ function split_block(b::Block)
   xc7 = [b.origin[1] + b.halfSize[1]/2.0, b.origin[2] + b.halfSize[2]/2.0,  b.origin[3] - b.halfSize[3]/2.0]
   xc8 = [b.origin[1] + b.halfSize[1]/2.0, b.origin[2] + b.halfSize[2]/2.0,  b.origin[3] + b.halfSize[3]/2.0]
 
-  b.children[1] = Block(xc1, b.halfSize/2.0, 1, Array(Block, 8), Cell[], b.nestingLevel+1, b.nx, b.ny, b.nz)
-  b.children[2] = Block(xc2, b.halfSize/2.0, 1, Array(Block, 8), Cell[], b.nestingLevel+1, b.nx, b.ny, b.nz)
-  b.children[3] = Block(xc3, b.halfSize/2.0, 1, Array(Block, 8), Cell[], b.nestingLevel+1, b.nx, b.ny, b.nz)
-  b.children[4] = Block(xc4, b.halfSize/2.0, 1, Array(Block, 8), Cell[], b.nestingLevel+1, b.nx, b.ny, b.nz)
-  b.children[5] = Block(xc5, b.halfSize/2.0, 1, Array(Block, 8), Cell[], b.nestingLevel+1, b.nx, b.ny, b.nz)
-  b.children[6] = Block(xc6, b.halfSize/2.0, 1, Array(Block, 8), Cell[], b.nestingLevel+1, b.nx, b.ny, b.nz)
-  b.children[7] = Block(xc7, b.halfSize/2.0, 1, Array(Block, 8), Cell[], b.nestingLevel+1, b.nx, b.ny, b.nz)
-  b.children[8] = Block(xc8, b.halfSize/2.0, 1, Array(Block, 8), Cell[], b.nestingLevel+1, b.nx, b.ny, b.nz)
-  b.isLeaf = 0
+  b.children[1] = Block(xc1, b.halfSize/2.0, true, Array(Block, 8), Cell[], b.nestingLevel+1, b.nx, b.ny, b.nz)
+  b.children[2] = Block(xc2, b.halfSize/2.0, true, Array(Block, 8), Cell[], b.nestingLevel+1, b.nx, b.ny, b.nz)
+  b.children[3] = Block(xc3, b.halfSize/2.0, true, Array(Block, 8), Cell[], b.nestingLevel+1, b.nx, b.ny, b.nz)
+  b.children[4] = Block(xc4, b.halfSize/2.0, true, Array(Block, 8), Cell[], b.nestingLevel+1, b.nx, b.ny, b.nz)
+  b.children[5] = Block(xc5, b.halfSize/2.0, true, Array(Block, 8), Cell[], b.nestingLevel+1, b.nx, b.ny, b.nz)
+  b.children[6] = Block(xc6, b.halfSize/2.0, true, Array(Block, 8), Cell[], b.nestingLevel+1, b.nx, b.ny, b.nz)
+  b.children[7] = Block(xc7, b.halfSize/2.0, true, Array(Block, 8), Cell[], b.nestingLevel+1, b.nx, b.ny, b.nz)
+  b.children[8] = Block(xc8, b.halfSize/2.0, true, Array(Block, 8), Cell[], b.nestingLevel+1, b.nx, b.ny, b.nz)
+  b.isLeaf = false
 
   for child in b.children
     insert_cells(child)
@@ -208,13 +208,13 @@ function getOctantContainingPoint(point::Array{Float64,1}, block::Block)
 end
 
 function blockContainingPoint(block::Block, point::Array{Float64,1})
-  if (block.isLeaf == 0)
+  if !block.isLeaf
     oct = getOctantContainingPoint(point, block)
     if oct == -1
       return false, block
     end
     blockContainingPoint(block.children[oct], point)
-  elseif (block.isLeaf == 1)
+  elseif block.isLeaf
     if !is_out_of_bounds(block, point)
       return true, block
     else

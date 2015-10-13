@@ -15,7 +15,7 @@ halfSize = ones(Float64, 3)*2*10
 nCellsX = 5
 nCellsY = 5
 nCellsZ = 5
-isLeaf = 1
+isLeaf = true 
 refLevel = 0
 
 # initialize octree with no cells.

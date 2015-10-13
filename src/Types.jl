@@ -1,10 +1,10 @@
 module Types
 
-  export Cell,
-         Block,
-         Point3D,
-         Particle,
-         Triangle
+export Cell,
+       Block,
+       Point3D,
+       Particle,
+       Triangle
 
 
 type Triangle
@@ -26,7 +26,6 @@ type Particle
   weight::Float64
 end
 
-
 type Cell
     origin::Vector{Float64}
     halfSize::Vector{Float64}
@@ -41,7 +40,7 @@ end
 type Block
     origin::Vector{Float64}
     halfSize::Vector{Float64}
-    isLeaf::Int64
+    isLeaf::Bool
     children::Vector{Block}
     cells::Vector{Cell}
     nestingLevel::Int64

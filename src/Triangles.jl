@@ -1,21 +1,13 @@
 module Triangles
+using Types
 using Octree
 
-export Triangle,
-       build_triangles,
+export build_triangles,
        calculate_surface_normals,
        calculate_tri_centers,
        calculate_tri_areas,
        assign_triangles!
 
-
-type Triangle
-  id::Int64
-  center::Array{Float64,1}
-  nodes::Array{Float64,2}
-  area::Float64
-  surfaceNormal::Array{Float64,1}
-end
 
 function assign_triangles!(oct, allTriangles)
   for tri in allTriangles
