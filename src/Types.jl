@@ -4,7 +4,14 @@ export Cell,
        Block,
        Point3D,
        Particle,
-       Triangle
+       Triangle,
+       _x,
+       _y,
+       _z
+
+const _x = 1
+const _y = 2
+const _z = 3
 
 
 type Triangle
