@@ -1,11 +1,10 @@
 
 module Gas
-using GasParticle
 using Distributions
 using Octree
+using Types
 
-export Particle,
-       move!,
+export move!,
        insert_new_particles,
        assign_particles!,
        compute_macroscopic_params,

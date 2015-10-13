@@ -1,7 +1,7 @@
 using Triangles
 using Octree
 
-function load_ply_file(fileName::AbstractString)
+function load_ply_file(fileName::String)
   nNodes::Int64 = 0
   nTriangles::Int64 = 0
   iHeader::Int64 = 0
