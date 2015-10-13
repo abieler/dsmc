@@ -2,3 +2,4 @@ output/domain.vtk
 **/output/*.vtk
 *.vtu
 src/oltStuff.jl
+*.pdf
