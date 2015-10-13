@@ -23,12 +23,12 @@ oct = Block(origin, halfSize, isLeaf, Array(Block,8), Cell[], refLevel, nCellsX,
 #split octree into 8 children
 split_block(oct)
 assign_triangles!(oct, allTriangles)
-for i=1:3
+for i=1:5
   refine_tree(oct)
   assign_triangles!(oct, allTriangles)
 end
 pStart = [18.0, 0.0, 0.0]
-@time cut_cell_volume!(oct, pStart, 1000)
+@time cut_cell_volume!(oct, pStart, 2000)
 
 for i=1:1
   insert_new_particles(oct, myPoint)
