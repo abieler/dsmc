@@ -22,6 +22,21 @@ function move!(p::Particle, dt)
   p.z = p.z + dt * p.vz
 end
 
+function next_pos!(p::Particle, dt, pos)
+  pos[1] = p.x + dt * p.vx
+  pos[2] = p.y + dt * p.vy
+  pos[3] = p.z + dt * p.vz
+end
+
+
+function gas_surface_collisions!(block)
+    for child in block.children
+      if child.isLef
+
+    counter = nTrianglesIntersects(cell.triangles, r, pStart, pRandom, vRandom)
+
+end
+
 function insert_new_particles(oct, coords)
   N = 100
   xMin = 19.5
@@ -79,12 +94,17 @@ function time_step(oct, lostParticles)
 end
 
 function perform_time_step(b::Block, lostParticles)
+  dt = 0.01
   coords = zeros(Float64, 3)
+  pos = zeros(Float64, 3)
   for cell in b.cells
     nParticles = length(cell.particles)
     if nParticles > 0
       for p in copy(cell.particles)
-        move!(p, 0.01)
+        if cell.hasTriangles
+          next_pos!(p, dt, pos)
+        end
+        move!(p, dt)
         wasAssigned = assign_particle!(b, p, coords)
         if !wasAssigned
           push!(lostParticles, p)

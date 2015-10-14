@@ -60,10 +60,6 @@ function cut_cell_volume!(oct, pStart, N)
           if nInside !== 0
             cell.volume *= (nOutside/(nOutside+nInside))
           end
-
-          #println("nInside: ", nInside)
-          #println("nOutside: ", nOutside)
-          #readline(STDIN)
         end
       end
     else
