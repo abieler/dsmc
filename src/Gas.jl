@@ -5,18 +5,11 @@ using Octree
 using Types
 using Physical
 
-include("constants.jl")
-
 export move!,
        insert_new_particles,
        assign_particles!,
        compute_macroscopic_params,
        time_step
-
-
-distY = Normal(0,25)
-distX = Normal()
-distZ = Normal()
 
 
 function move!(p::Particle, dt)
