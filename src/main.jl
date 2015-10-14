@@ -41,8 +41,9 @@ pStart = [18.0, 0.0, 0.0]
 ################################################################################
 # main loop
 ################################################################################
-for iteration=1:10
-  insert_new_particles(oct, myPoint)
+nParticles = 100
+for iteration = 1:10
+  insert_new_particles(oct, nParticles, myPoint)
   compute_macroscopic_params(oct)
   time_step(oct, lostParticles)
   assign_particles!(oct, lostParticles, myPoint)
