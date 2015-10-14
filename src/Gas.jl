@@ -25,18 +25,25 @@ function move!(p::Particle, dt)
   p.z = p.z + dt * p.vz
 end
 
-function insert_new_particles(oct, coords)
-  N = 100
-  xMin = 19.5
-  xMax = 19.9
-  yMin = -5
-  yMax = 5
-  zMin = -5
-  zMax = 5
+function insert_new_particles(oct, nParticles, coords)
 
-  xInit = rand(xMin:0.01:xMax, N)
-  yInit = rand(yMin:0.01:yMax, N)
-  zInit = rand(zMin:0.01:zMax, N)
+  particleMass = 18.0 * amu
+  w_factor = 1.0
+  xMin = oct.origin[1] + oct.halfSize[1] * 0.95
+  xMax = oct.origin[1] + oct.halfSize[1] * 0.99
+  yMin = oct.origin[2] - oct.halfSize[2] * 0.1
+  yMax = oct.origin[2] + oct.halfSize[2] * 0.1
+  zMin = oct.origin[3] - oct.halfSize[3] * 0.1
+  zMax = oct.origin[3] + oct.halfSize[3] * 0.1
+
+  dx = (xMax - xMin) / 1000.0
+  dy = (yMax - yMin) / 1000.0
+  dz = (zMax - zMin) / 1000.0
+
+
+  xInit = rand(xMin:dx:xMax, N)
+  yInit = rand(yMin:dy:yMax, N)
+  zInit = rand(zMin:dz:zMax, N)
 
   vxInit = -ones(Float64, N)
   vyInit = zeros(Float64, N)
@@ -46,9 +53,8 @@ function insert_new_particles(oct, coords)
   for i=1:N
     newParticles[i] = Particle(xInit[i], yInit[i], zInit[i],
                  vxInit[i], vyInit[i], vzInit[i],
-                 18.0, 1.0)  #18 mass in amu, #Weight factor
+                 particleMass, w_factor)
   end
-
   assign_particles!(oct, newParticles, coords)
 end
 
@@ -58,9 +64,10 @@ end
 #insert particles uniformly about sphere
 #possible update insert particles from each spherical surface
 #####################
-function insert_new_particles_sphere(oct, coords, N)
-#need radius of body it will be used in multiple places
-#(! function input parameters are changed)
+function insert_new_particles_sphere(oct, N, coords)
+# need radius of body it will be used in multiple places
+# (! function input parameters are changed)
+# coords is a 3-Vector passed to assign_particles unmodified
   body_radius = 3.0
   mass_N2 = 28.0 * amu
   w_factor = 1.0
@@ -78,7 +85,7 @@ function insert_new_particles_sphere(oct, coords, N)
     newParticles[i] = Particle(xInit, yInit, zInit, vxInit, vyInit, vzInit,
                                mass_N2, w_factor)
   end
-  assign_particles!(oct, newParticles)
+  assign_particles!(oct, newParticles, coords)
 end
 
 ############O.J.10-13-15###############################################
