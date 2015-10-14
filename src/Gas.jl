@@ -5,6 +5,8 @@ using Octree
 using Types
 using Physical
 
+include("constants.jl")
+
 export move!,
        insert_new_particles,
        assign_particles!,
@@ -56,48 +58,56 @@ end
 #insert particles uniformly about sphere
 #possible update insert particles from each spherical surface
 #####################
-function insert_new_particles_sphere(oct, coords)
+function insert_new_particles_sphere(oct, coords, N)
 #need radius of body it will be used in multiple places
 #(! function input parameters are changed)
   body_radius = 3.0
-  theta = 2.0*pi*rand()
-  phi = acos(2.0*rand()-1.0)
+  mass_N2 = 28.0 * amu
+  w_factor = 1.0
+  newParticles = Array(Particle, N)
   for i=1:N
-    mass_N2[i]=28.0*amu
-    xInit[i]=body_radius*cos(theta)*sin(phi)
-	  yInit[i]=body_radius*sin(theta)*sin(phi)
-	  zInit[i]=body_radius*cos(phi)
-	  vxInit,vyInit,vzInit=maxwell_boltzmann_flux_v(theta,phi)
+    theta = 2.0 * pi * rand()
+    phi = acos(2.0 * rand() - 1.0)
+
+    xInit = body_radius * cos(theta) * sin(phi)
+	  yInit = body_radius * sin(theta) * sin(phi)
+	  zInit = body_radius * cos(phi)
+
+	  vxInit, vyInit, vzInit = maxwell_boltzmann_flux_v(theta, phi)
+
+    newParticles[i] = Particle(xInit, yInit, zInit, vxInit, vyInit, vzInit,
+                               mass_N2, w_factor)
   end
+  assign_particles!(oct, newParticles)
 end
 
 ############O.J.10-13-15###############################################
 #Maxwwell Boltzmann flux velocity
 ############################
-function maxwell_boltmann_flux_v(thetaPos,phiPos)
+function maxwell_boltmann_flux_v(thetaPos, phiPos)
   velmax = 3000.0e3
-  temperature = source_temperature!()
-  beta=mass_N2[i]/2.0/k_boltz/temperature
+  temperature = source_temperature()
+  beta = mass_N2 / 2.0 / k_boltz / temperature
   while r > prb
-    vel=rand()*velmax
-    a=vel*vel*beta
-    prb = vel^3.0*exp(-a)/((1.5/beta)^(1.5)*exp(-1.5))
+    vel = rand() * velmax
+    a = vel * vel * beta
+    prb = vel^3.0 * exp(-a) / ((1.5 / beta)^(1.5) * exp(-1.5))
   end
-  theta = 2.0*pi*rand()
+  theta = 2.0 * pi * rand()
   #polar angle determined from cosine distribution
   phi = asin(sqrt(rand()))
-  vx=vel*cos(theta)*sin(phi)
-  vy=vel*sin(theta)*sin(phi)
-  vz=vel*cos(phi)
+  vx = vel * cos(theta) * sin(phi)
+  vy = vel * sin(theta) * sin(phi)
+  vz = vel * cos(phi)
   #Need to rotate vector to particle position
-  return vx,vy,vz
+  return vx, vy, vz
 end
 
 ############O.J.10-13-15###############################################
 #Source Temperature
 #Change as need for distribution about source based on particle coordinate on surface node face
 ############################
-function source_temperature!()
+function source_temperature()
   return 150.0
 end
 
