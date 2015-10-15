@@ -41,11 +41,12 @@ pStart = [5.0, 0.0, 0.0]
 ################################################################################
 # main loop
 ################################################################################
-nParticles = 500
+nParticles = 50000
 for iteration = 1:4
   #insert_new_particles(oct, nParticles, myPoint)
   if iteration == 1
-    @time insert_new_particles_body(oct, allTriangles, nParticles, myPoint)
+    insert_new_particles_sphere(oct, nParticles, myPoint)
+    #  @time insert_new_particles_body(oct, allTriangles, nParticles, myPoint)
   end
   save_particles(oct, "../output/particles_init_" *string(iteration)* ".csv")
   compute_macroscopic_params(oct)
