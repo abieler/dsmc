@@ -3,10 +3,12 @@ module Gas
 using Distributions
 using Octree
 using Types
-using Physical
+using Triangles
+#using Physical
 
 export move!,
        insert_new_particles,
+       insert_new_particles_body,
        assign_particles!,
        compute_macroscopic_params,
        time_step
@@ -34,8 +36,29 @@ function gas_surface_collisions!(block)
 
 end
 
-function insert_new_particles(oct, nParticles, coords)
+function insert_new_particles_body(oct, allTriangles, nParticles, coords)
+  particleMass = 18.0
+  w_factor = 1.0
+  for tri in allTriangles
+    N = int(tri.area * nParticles)
+    newParticles = Array(Particle, N)
+    for i=1:N
+      rr = rand()
+      pick_point!(tri, coords)
+      x = coords[1]
+      y = coords[2]
+      z = coords[3]
+      vx = tri.surfaceNormal[1] * 10.0 * rr
+      vy = tri.surfaceNormal[2] * 10.0 * rr
+      vz = tri.surfaceNormal[3] * 10.0 * rr
+      newParticles[i] = Particle(x, y, z, vx, vy, vz, particleMass, w_factor)
+    end
+    assign_particles!(oct, newParticles, coords)
+  end
+end
 
+function insert_new_particles(oct, nParticles, coords)
+  amu = 1.0
   particleMass = 18.0 * amu
   w_factor = 1.0
   xMin = oct.origin[1] + oct.halfSize[1] * 0.95
@@ -49,16 +72,16 @@ function insert_new_particles(oct, nParticles, coords)
   dy = (yMax - yMin) / 1000.0
   dz = (zMax - zMin) / 1000.0
 
-  xInit = rand(xMin:dx:xMax, N)
-  yInit = rand(yMin:dy:yMax, N)
-  zInit = rand(zMin:dz:zMax, N)
+  xInit = rand(xMin:dx:xMax, nParticles)
+  yInit = rand(yMin:dy:yMax, nParticles)
+  zInit = rand(zMin:dz:zMax, nParticles)
 
-  vxInit = -ones(Float64, N)
-  vyInit = zeros(Float64, N)
-  vzInit = zeros(Float64, N)
+  vxInit = -ones(Float64, nParticles)
+  vyInit = zeros(Float64, nParticles)
+  vzInit = zeros(Float64, nParticles)
 
-  newParticles = Array(Particle, N)
-  for i=1:N
+  newParticles = Array(Particle, nParticles)
+  for i=1:nParticles
     newParticles[i] = Particle(xInit[i], yInit[i], zInit[i],
                  vxInit[i], vyInit[i], vzInit[i],
                  particleMass, w_factor)
@@ -76,6 +99,7 @@ function insert_new_particles_sphere(oct, N, coords)
 # need radius of body it will be used in multiple places
 # (! function input parameters are changed)
 # coords is a 3-Vector passed to assign_particles unmodified
+  amu = 1.0
   body_radius = 3.0
   mass_N2 = 28.0 * amu
   w_factor = 1.0
@@ -100,6 +124,7 @@ end
 #Maxwwell Boltzmann flux velocity
 ############################
 function maxwell_boltmann_flux_v(thetaPos, phiPos)
+  prb = 1.0
   velmax = 3000.0e3
   temperature = source_temperature()
   beta = mass_N2 / 2.0 / k_boltz / temperature
@@ -157,7 +182,7 @@ function time_step(oct, lostParticles)
 end
 
 function perform_time_step(b::Block, lostParticles)
-  dt = 0.01
+  dt = 0.1
   coords = zeros(Float64, 3)
   pos = zeros(Float64, 3)
   for cell in b.cells
