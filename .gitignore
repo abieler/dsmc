@@ -3,3 +3,4 @@ output/domain.vtk
 *.vtu
 src/oltStuff.jl
 *.pdf
+*.csv
