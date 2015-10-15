@@ -40,17 +40,17 @@ function insert_new_particles_body(oct, allTriangles, nParticles, coords)
   particleMass = 18.0
   w_factor = 1.0
   for tri in allTriangles
-    N = int(tri.area * nParticles)
+    N = round(Int, tri.area * nParticles)
     newParticles = Array(Particle, N)
     for i=1:N
-      rr = rand()
       pick_point!(tri, coords)
       x = coords[1]
       y = coords[2]
       z = coords[3]
-      vx = tri.surfaceNormal[1] * 10.0 * rr
-      vy = tri.surfaceNormal[2] * 10.0 * rr
-      vz = tri.surfaceNormal[3] * 10.0 * rr
+      vx = tri.surfaceNormal[1]
+      vy = tri.surfaceNormal[2]
+      vz = tri.surfaceNormal[3]
+      println("newV: ", norm(surfaceNormal))
       newParticles[i] = Particle(x, y, z, vx, vy, vz, particleMass, w_factor)
     end
     assign_particles!(oct, newParticles, coords)
@@ -209,7 +209,7 @@ function assign_particles!(oct, particles, coords)
     coords[2] = p.y
     coords[3] = p.z
     if !is_out_of_bounds(oct, coords)
-      foundCell, cell = cellContainingPoint(oct, coords)
+      foundCell, cell = cell_containing_point(oct, coords)
       if foundCell
         push!(cell.particles, p)
       end
@@ -223,7 +223,7 @@ function assign_particle!(oct, p, coords)
     coords[1] = p.x
     coords[2] = p.y
     coords[3] = p.z
-    foundCell, cell = cellContainingPoint(oct, coords)
+    foundCell, cell = cell_containing_point(oct, coords)
     if foundCell
       push!(cell.particles, p)
       return true

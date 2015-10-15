@@ -45,11 +45,7 @@ function cut_cell_volume!(oct, pStart, N)
             pRandom[1] = x[i]
             pRandom[2] = y[i]
             pRandom[3] = z[i]
-            for k=1:3
-              r[k] = pRandom[k] - pStart[k]
-            end
-            r = r / norm(r)
-            counter = nTrianglesIntersects(cell.triangles, r, pStart, pRandom, vRandom)
+            counter = nTrianglesIntersects(cell.triangles, pStart, pRandom, vRandom)
             if (counter % 2) == 1
               nInside += 1
             else
@@ -65,13 +61,16 @@ function cut_cell_volume!(oct, pStart, N)
       cut_cell_volume!(block, pStart, N)
     end
   end
-
 end
 
 function refine(b::Block, nCellsMax)
-  for cell in b.cells
-    if length(cell.triangles) > nCellsMax
-      split_block(b)
+  if nCellsMax == 0
+    split_block(b)
+  else
+    for cell in b.cells
+      if length(cell.triangles) >= nCellsMax
+        split_block(b)
+      end
     end
   end
 end
@@ -81,7 +80,7 @@ function refine_tree(oct, nCellsMax=10)
     if block.isLeaf
       refine(block, nCellsMax)
     else
-      refine_tree(block)
+      refine_tree(block, nCellsMax)
     end
   end
 end

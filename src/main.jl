@@ -31,8 +31,8 @@ split_block(oct)
 # refine domain and compute volume of cut cells
 ################################################################################
 assign_triangles!(oct, allTriangles)
-for i=1:7
-  refine_tree(oct)
+for i=1:4
+  refine_tree(oct, 1)
   assign_triangles!(oct, allTriangles)
 end
 pStart = [5.0, 0.0, 0.0]
@@ -41,12 +41,13 @@ pStart = [5.0, 0.0, 0.0]
 ################################################################################
 # main loop
 ################################################################################
-nParticles = 1200
-for iteration = 1:20
+nParticles = 500
+for iteration = 1:4
   #insert_new_particles(oct, nParticles, myPoint)
-  if iteration >= 1
+  if iteration == 1
     @time insert_new_particles_body(oct, allTriangles, nParticles, myPoint)
   end
+  save_particles(oct, "../output/particles_init_" *string(iteration)* ".csv")
   compute_macroscopic_params(oct)
   @time time_step(oct, lostParticles)
   @time assign_particles!(oct, lostParticles, myPoint)

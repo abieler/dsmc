@@ -182,3 +182,27 @@ function save2vtk(oct)
   end
   close(oFile)
 end
+
+
+function save_particles(oct, fileName)
+  println("saving particles to file")
+  oFile = open(fileName, "w")
+  write(oFile, "x,y,z,vx,vy,vz\n")
+  data2CSV(oct, oFile)
+  close(oFile)
+  println("done!")
+end
+
+function data2CSV(oct, oFile)
+  for child in oct.children
+    if child.isLeaf
+      for cell in child.cells
+          for p in cell.particles
+            @printf oFile "%.3e,%3.e,%.3e,%.3e,%.3e,%.3e\n" p.x p.y p.z p.vx p.vy p.vz
+          end
+      end
+    else
+      data2CSV(child, oFile)
+    end
+  end
+end
