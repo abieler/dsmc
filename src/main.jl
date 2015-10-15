@@ -14,7 +14,7 @@ nTriangles, allTriangles = load_ply_file("../input/cow.ply")
 # initialize simulation domain
 ################################################################################
 origin = zeros(Float64, 3)
-halfSize = ones(Float64, 3)*2*10
+halfSize = ones(Float64, 3) * 20
 nCellsX = 5
 nCellsY = 5
 nCellsZ = 5
@@ -31,23 +31,28 @@ split_block(oct)
 # refine domain and compute volume of cut cells
 ################################################################################
 assign_triangles!(oct, allTriangles)
-for i=1:5
+for i=1:7
   refine_tree(oct)
   assign_triangles!(oct, allTriangles)
 end
-pStart = [18.0, 0.0, 0.0]
+pStart = [5.0, 0.0, 0.0]
 @time cut_cell_volume!(oct, pStart, 2000)
 
 ################################################################################
 # main loop
 ################################################################################
-nParticles = 100
-for iteration = 1:10
-  insert_new_particles(oct, nParticles, myPoint)
+nParticles = 1200
+for iteration = 1:20
+  #insert_new_particles(oct, nParticles, myPoint)
+  if iteration >= 1
+    @time insert_new_particles_body(oct, allTriangles, nParticles, myPoint)
+  end
   compute_macroscopic_params(oct)
-  time_step(oct, lostParticles)
-  assign_particles!(oct, lostParticles, myPoint)
+  @time time_step(oct, lostParticles)
+  @time assign_particles!(oct, lostParticles, myPoint)
   lostParticles = Particle[]
+  println(iteration)
+  println()
 end
 
 ################################################################################
