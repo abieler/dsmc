@@ -27,7 +27,6 @@ function next_pos!(p::Particle, dt, pos)
   pos[3] = p.z + dt * p.vz
 end
 
-
 function gas_surface_collisions!(block)
     for child in block.children
       if child.isLef
@@ -37,21 +36,21 @@ function gas_surface_collisions!(block)
 
 end
 
-function insert_new_particles_body(oct, allTriangles, nParticles, coords)
+function insert_new_particles_body(oct, allTriangles, f, coords)
   particleMass = 18.0
   w_factor = 1.0
+  speed = 10.0
   for tri in allTriangles
-    N = round(Int, tri.area * nParticles)
+    N = round(Int, tri.area * f)
     newParticles = Array(Particle, N)
     for i=1:N
       pick_point!(tri, coords)
       x = coords[1]
       y = coords[2]
       z = coords[3]
-      vx = tri.surfaceNormal[1]
-      vy = tri.surfaceNormal[2]
-      vz = tri.surfaceNormal[3]
-      println("newV: ", norm(surfaceNormal))
+      vx = tri.surfaceNormal[1] * speed
+      vy = tri.surfaceNormal[2] * speed
+      vz = tri.surfaceNormal[3] * speed
       newParticles[i] = Particle(x, y, z, vx, vy, vz, particleMass, w_factor)
     end
     assign_particles!(oct, newParticles, coords)
