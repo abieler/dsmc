@@ -5,14 +5,13 @@ using RayTrace
 
 export split_block,
        insert_cells,
-       blockContainingPoint,
-       cellContainingPoint,
+       block_containing_point,
+       cell_containing_point,
        populate_blocks,
        out_of_bounds,
        count_cells,
        refine_tree,
        octree_slice!,
-       allCellsWithParticles,
        all_cells!,
        is_out_of_bounds,
        cut_cell_volume!
@@ -185,7 +184,7 @@ function split_block(b::Block)
 
 end
 
-function getOctantContainingPoint(point::Array{Float64,1}, block::Block)
+function octant_containing_point(point::Array{Float64,1}, block::Block)
   if !is_out_of_bounds(block, point)
     octant::Int64 = 1
     if (point[1] >= block.origin[1])
@@ -203,13 +202,13 @@ function getOctantContainingPoint(point::Array{Float64,1}, block::Block)
   end
 end
 
-function blockContainingPoint(block::Block, point::Array{Float64,1})
+function block_containing_point(block::Block, point::Array{Float64,1})
   if !block.isLeaf
-    oct = getOctantContainingPoint(point, block)
+    oct = octant_containing_point(point, block)
     if oct == -1
       return false, block
     end
-    blockContainingPoint(block.children[oct], point)
+    block_containing_point(block.children[oct], point)
   elseif block.isLeaf
     if !is_out_of_bounds(block, point)
       return true, block
@@ -219,8 +218,8 @@ function blockContainingPoint(block::Block, point::Array{Float64,1})
   end
 end
 
-function cellContainingPoint(oct::Block, point::Array{Float64, 1})
-  foundBlock, block = blockContainingPoint(oct, point)
+function cell_containing_point(oct::Block, point::Array{Float64, 1})
+  foundBlock, block = block_containing_point(oct, point)
   if foundBlock
     nx = block.nx
     ny = block.ny

@@ -14,7 +14,7 @@ function raytrace(oct, r, r_hat)
   doesIntersect = intersect(cell.triangles, r_hat, g)
 end
 
-function nTrianglesIntersects(triangles, r, p, pRandom, vRandom)
+function nTrianglesIntersects(triangles, p, pRandom, vRandom)
   nTriangles = length(triangles)
   #println("start intersect for ", nTriangles, " triangles")
   i = 0
@@ -41,9 +41,10 @@ function nTrianglesIntersects(triangles, r, p, pRandom, vRandom)
   w = [0.,0.,0.]
 
   for i=1:3
-    vRandom[i] = p[i] - pRandom[i]
+    vRandom[i] = pRandom[i] - p[i]
   end
   lRandom = norm(vRandom)
+  r = vRandom/lRandom
   counter = 0
 
   for i=1:nTriangles
