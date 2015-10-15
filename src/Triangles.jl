@@ -6,8 +6,23 @@ export build_triangles,
        calculate_surface_normals,
        calculate_tri_centers,
        calculate_tri_areas,
-       assign_triangles!
+       assign_triangles!,
+       pick_point!
 
+
+function pick_point!(tri::Triangle, coords)
+  A = B = C = 0.0
+  r1 = rand()
+  r2 = rand()
+  sqrt_r1 = sqrt(r1)
+
+  for i=1:3
+    A = (1 - sqrt_r1) * tri.nodes[i,1]
+    B = (sqrt_r1 * (1 - r2)) * tri.nodes[i,2]
+    C = (sqrt_r1 * r2) * tri.nodes[i,3]
+    coords[i] = A + B + C
+  end
+end
 
 function assign_triangles!(oct, allTriangles)
   for tri in allTriangles

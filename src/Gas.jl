@@ -18,7 +18,6 @@ function move!(p::Particle, dt)
   p.z = p.z + dt * p.vz
 end
 
-<<<<<<< HEAD
 function next_pos!(p::Particle, dt, pos)
   pos[1] = p.x + dt * p.vx
   pos[2] = p.y + dt * p.vy
@@ -29,20 +28,12 @@ end
 function gas_surface_collisions!(block)
     for child in block.children
       if child.isLef
-
-    counter = nTrianglesIntersects(cell.triangles, r, pStart, pRandom, vRandom)
+       counter = nTrianglesIntersects(cell.triangles, r, pStart, pRandom, vRandom)
+     end
+   end
 
 end
 
-function insert_new_particles(oct, coords)
-  N = 100
-  xMin = 19.5
-  xMax = 19.9
-  yMin = -5
-  yMax = 5
-  zMin = -5
-  zMax = 5
-=======
 function insert_new_particles(oct, nParticles, coords)
 
   particleMass = 18.0 * amu
@@ -57,8 +48,6 @@ function insert_new_particles(oct, nParticles, coords)
   dx = (xMax - xMin) / 1000.0
   dy = (yMax - yMin) / 1000.0
   dz = (zMax - zMin) / 1000.0
-
->>>>>>> f0e9037a61168d09e6b584a6fed0b8630fb96319
 
   xInit = rand(xMin:dx:xMax, N)
   yInit = rand(yMin:dy:yMax, N)
