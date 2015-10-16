@@ -183,7 +183,7 @@ function compute_params(block)
   end
 end
 
-function time_step(oct, lostParticles)
+function time_step(oct::Block, lostParticles)
   for block in oct.children
     if block.isLeaf == 1
       perform_time_step(block, lostParticles)
@@ -201,13 +201,14 @@ function perform_time_step(b::Block, lostParticles)
     nParticles = length(cell.particles)
     if nParticles > 0
       for p in copy(cell.particles)
-        if cell.hasTriangles
-          next_pos!(p, dt, pos)
-        end
-        move!(p, dt)
-        wasAssigned = assign_particle!(b, p, coords)
-        if !wasAssigned
-          push!(lostParticles, p)
+        if p.cellID == cell.ID
+          move!(p, dt)
+          wasAssigned = assign_particle!(b, p, coords)
+          if !wasAssigned
+            push!(lostParticles, p)
+          end
+        else
+          p.cellID = cell.ID
         end
       end
       splice!(cell.particles, 1:nParticles)
@@ -236,13 +237,10 @@ function assign_particle!(oct, p, coords)
     coords[1] = p.x
     coords[2] = p.y
     coords[3] = p.z
-    oldCellID = p.cellID
     foundCell, cell = cell_containing_point(oct, coords)
     if foundCell
-      if p.cellID == oldCellID
-        push!(cell.particles, p)
-        return true
-      end
+      push!(cell.particles, p)
+      return true
     else
       return false
     end
