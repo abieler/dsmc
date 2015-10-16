@@ -4,6 +4,7 @@ using Distributions
 using Octree
 using Types
 using Triangles
+
 include("Physical.jl")
 
 export move!,
@@ -12,7 +13,10 @@ export move!,
        insert_new_particles_sphere,
        assign_particles!,
        compute_macroscopic_params,
-       time_step
+       time_step,
+       constant_weight
+
+
 
 
 function move!(p::Particle, dt)
@@ -51,7 +55,6 @@ function insert_new_particles_body(oct, allTriangles, nParticles, coords)
       vx = tri.surfaceNormal[1]
       vy = tri.surfaceNormal[2]
       vz = tri.surfaceNormal[3]
-      println("newV: ", norm(surfaceNormal))
       newParticles[i] = Particle(x, y, z, vx, vy, vz, particleMass, w_factor)
     end
     assign_particles!(oct, newParticles, coords)
@@ -91,34 +94,26 @@ function insert_new_particles(oct, nParticles, coords)
 end
 
 
-function insert_new_particles_sphere(oct, nParticles,coords)
-# #need radius of body it will be used in multiple places
+function insert_new_particles_sphere(oct, nParticles, coords, S, dt)
 # #(! function input parameters are changed)
-   N = nParticles
-   body_radius = 3.0
-   newParticles = Array(Particle, N)
-   xInit = zeros(Float64, N)
-   yInit = zeros(Float64, N)
-   zInit = zeros(Float64, N)
+  println("dt: ", dt)
+   newParticles = Array(Particle, nParticles)
 
-   vxInit = zeros(Float64, N)
-   vyInit = zeros(Float64, N)
-   vzInit = zeros(Float64, N)
-
-   mass_N2 = zeros(Float64, N)
-
-   for i=1:N
-     mass_N2[i]=28.0*amu
+   particleMassN2 = zeros(Float64, nParticles)
+   particleMass = 28.0*amu
+   w_factor = constant_weight(dt,S,particleMass)
+   println("start loop:")
+   for i=1:nParticles
      theta = 2.0*pi*rand()
      phi = acos(2.0*rand()-1.0)
-     xInit[i]=body_radius*cos(theta)*sin(phi)
- 	   yInit[i]=body_radius*sin(theta)*sin(phi)
- 	   zInit[i]=body_radius*cos(phi)
- 	   vxInit[i],vyInit[i],vzInit[i]=maxwell_boltzmann_flux_v()
-     vxInit[i],vyInit[i],vzInit[i]=rotate_vec_to_pos(vxInit[i],vyInit[i],vzInit[i],xInit[i],yInit[i],zInit[i])
-     newParticles[i] = Particle(xInit[i], yInit[i], zInit[i],
-              vxInit[i], vyInit[i], vzInit[i],
-                 mass_N2[i], 1.0)  #18 mass in amu, #Weight factor
+     xInit=S.SourceRadius*cos(theta)*sin(phi)
+ 	   yInit=S.SourceRadius*sin(theta)*sin(phi)
+ 	   zInit=S.SourceRadius*cos(phi)
+ 	   vxInit,vyInit,vzInit=maxwell_boltzmann_flux_v(S.SourceTemperature,particleMass)
+     vxInit,vyInit,vzInit = rotate_vec_to_pos(vxInit,vyInit,vzInit,xInit,yInit,zInit)
+     newParticles[i] = Particle(xInit, yInit, zInit,
+              vxInit, vyInit, vzInit,
+                 particleMassN2[i], w_factor)  #18 mass in amu, #Weight factor
   end
 
   assign_particles!(oct, newParticles, coords)
@@ -127,25 +122,26 @@ end
 # ############O.J.10-13-15###############################################
 # #Maxwwell Boltzmann flux velocity
 # ############################
- function maxwell_boltzmann_flux_v()
-   velmax = 3000.0e3
-   temperature = 155.0
-   mass=28.0*amu
-   beta=mass/2.0/k_boltz/temperature
-   r=rand()
-  prb=0.0
-  vel=0.0
+ function maxwell_boltzmann_flux_v(temperature,mass)
+  velmax = 3000.0
+  beta::Float64 = mass/2.0/k_boltz/temperature
+  prb::Float64 = 0.0
+  r = 1.0
+
+  vel = 0.0
+  ii = 0
   while r > prb
-     vel=rand()*velmax
-     a=vel*vel*beta
+     vel = rand()*velmax
+     a = vel*vel*beta
      prb = vel^3.0*exp(-a)/((1.5/beta)^(1.5)*exp(-1.5))
+     r = rand()
    end
    theta = 2.0*pi*rand()
    #polar angle determined from cosine distribution
    phi = asin(sqrt(rand()))
-   vx=vel*cos(theta)*sin(phi)
-   vy=vel*sin(theta)*sin(phi)
-   vz=vel*cos(phi)
+   vx = vel*cos(theta)*sin(phi)
+   vy = vel*sin(theta)*sin(phi)
+   vz = vel*cos(phi)
 #   #Need to rotate vector to particle position
    return vx,vy,vz
  end
@@ -157,10 +153,10 @@ function rotate_vec_to_pos(vecx,vecy,vecz,posx,posy,posz)
 	costheta = posx/sinphi/r
 	sintheta = posy/sinphi/r
 
-	rotated_vectorx =vecx*costheta*cosphi-vecy*sintheta+vecz*costheta*sinphi
-	rotated_vectory =vecx*sintheta*cosphi+vecy*costheta+vecz*sintheta*sinphi
-	rotated_vectorz =-vecx*sinphi+vecz*cosphi
-    return rotated_vectorx,rotated_vectory,rotated_vectorz
+	rotated_vectorx = vecx*costheta*cosphi-vecy*sintheta+vecz*costheta*sinphi
+	rotated_vectory = vecx*sintheta*cosphi+vecy*costheta+vecz*sintheta*sinphi
+	rotated_vectorz = -vecx*sinphi+vecz*cosphi
+    return rotated_vectorx, rotated_vectory, rotated_vectorz
 end
 
 function compute_macroscopic_params(oct)
@@ -183,7 +179,7 @@ function compute_params(block)
   end
 end
 
-function time_step(oct, lostParticles)
+function time_step(oct::Block, lostParticles)
   for block in oct.children
     if block.isLeaf == 1
       perform_time_step(block, lostParticles)
@@ -201,9 +197,6 @@ function perform_time_step(b::Block, lostParticles)
     nParticles = length(cell.particles)
     if nParticles > 0
       for p in copy(cell.particles)
-        if cell.hasTriangles
-          next_pos!(p, dt, pos)
-        end
         move!(p, dt)
         wasAssigned = assign_particle!(b, p, coords)
         if !wasAssigned
@@ -243,5 +236,18 @@ function assign_particle!(oct, p, coords)
       return false
     end
 end
+
+function constant_weight(dt,S::UniformSource,mass)
+  nParticles = 50
+  vth = sqrt(8.0*k_boltz*S.SourceTemperature/pi/mass)
+  Flux = pi*S.SourceRadius^2*S.SourceDensity*vth
+  return Flux*dt/nParticles
+end
+
+function time_step(temperature,mass)
+  ####for test purpose using path lenth of 500 should be based on cell length
+  return sqrt(8.0*k_boltz*temperature/pi/mass)/500.0
+end
+
 
 end
