@@ -4,7 +4,7 @@ General use:
   git clone https://github.com/abieler/dsmc.git
 
 
-* after modifying the file fileName.jl:
+* modifying the file fileName.jl and commiting changes:
   git add fileName.jl
   git commit fileName.jl
   git push
