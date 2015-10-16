@@ -49,8 +49,8 @@ label_cells!(oct)
 const nParticles = 20000
 const f = nParticles / surfaceArea
 
-for iteration = 1:200
-  if iteration == 1
+for iteration = 1:50
+  if iteration >= 1
     #insert_new_particles_sphere(oct, nParticles, myPoint)
     insert_new_particles_body(oct, allTriangles, f, myPoint)
   end

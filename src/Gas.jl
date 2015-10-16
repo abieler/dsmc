@@ -101,9 +101,9 @@ function insert_new_particles_sphere(oct, nParticles,coords)
    yInit = zeros(Float64, N)
    zInit = zeros(Float64, N)
 
-   vxInit = zeros(Float64, N)
-   vyInit = zeros(Float64, N)
-   vzInit = zeros(Float64, N)
+   vxInit = zeros(Float64, N) * 100
+   vyInit = zeros(Float64, N) * 100
+   vzInit = zeros(Float64, N) * 100
 
    mass_N2 = zeros(Float64, N)
 
@@ -194,7 +194,7 @@ function time_step(oct::Block, lostParticles)
 end
 
 function perform_time_step(b::Block, lostParticles)
-  dt = 0.01
+  dt = 0.02
   coords = zeros(Float64, 3)
   pos = zeros(Float64, 3)
   for cell in b.cells
