@@ -203,12 +203,10 @@ function perform_time_step(b::Block, lostParticles)
       for p in copy(cell.particles)
         if p.cellID == cell.ID
           move!(p, dt)
-          wasAssigned = assign_particle!(b, p, coords)
-          if !wasAssigned
-            push!(lostParticles, p)
-          end
-        else
-          p.cellID = cell.ID
+        end
+        wasAssigned = assign_particle!(b, p, coords)
+        if !wasAssigned
+          push!(lostParticles, p)
         end
       end
       splice!(cell.particles, 1:nParticles)
@@ -239,6 +237,7 @@ function assign_particle!(oct, p, coords)
     coords[3] = p.z
     foundCell, cell = cell_containing_point(oct, coords)
     if foundCell
+      p.cellID = cell.ID
       push!(cell.particles, p)
       return true
     else
