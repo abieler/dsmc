@@ -9,14 +9,10 @@ include("Physical.jl")
 
 export move!,
        insert_new_particles,
-       insert_new_particles_body,
-       insert_new_particles_sphere,
        assign_particles!,
        compute_macroscopic_params,
        time_step,
        constant_weight
-
-
 
 
 function move!(p::Particle, dt)
@@ -37,7 +33,6 @@ function gas_surface_collisions!(block)
        counter = nTrianglesIntersects(cell.triangles, r, pStart, pRandom, vRandom)
      end
    end
-
 end
 
 function insert_new_particles_body(oct, allTriangles, f, coords)
@@ -56,44 +51,11 @@ function insert_new_particles_body(oct, allTriangles, f, coords)
       vx = tri.surfaceNormal[1]
       vy = tri.surfaceNormal[2]
       vz = tri.surfaceNormal[3]
-      newParticles[i] = Particle(x, y, z, vx, vy, vz, particleMass, w_factor)
+      newParticles[i] = Particle(cellID, x, y, z, vx, vy, vz, particleMass, w_factor)
     end
     assign_particles!(oct, newParticles, coords)
   end
 end
-
-function insert_new_particles(oct, nParticles, coords)
-  amu = 1.0
-  particleMass = 18.0 * amu
-  w_factor = 1.0
-  xMin = oct.origin[1] + oct.halfSize[1] * 0.95
-  xMax = oct.origin[1] + oct.halfSize[1] * 0.99
-  yMin = oct.origin[2] - oct.halfSize[2] * 0.1
-  yMax = oct.origin[2] + oct.halfSize[2] * 0.1
-  zMin = oct.origin[3] - oct.halfSize[3] * 0.1
-  zMax = oct.origin[3] + oct.halfSize[3] * 0.1
-
-  dx = (xMax - xMin) / 1000.0
-  dy = (yMax - yMin) / 1000.0
-  dz = (zMax - zMin) / 1000.0
-
-  xInit = rand(xMin:dx:xMax, nParticles)
-  yInit = rand(yMin:dy:yMax, nParticles)
-  zInit = rand(zMin:dz:zMax, nParticles)
-
-  vxInit = -ones(Float64, nParticles)
-  vyInit = zeros(Float64, nParticles)
-  vzInit = zeros(Float64, nParticles)
-
-  newParticles = Array(Particle, nParticles)
-  for i=1:nParticles
-    newParticles[i] = Particle(xInit[i], yInit[i], zInit[i],
-                 vxInit[i], vyInit[i], vzInit[i],
-                 particleMass, w_factor)
-  end
-  assign_particles!(oct, newParticles, coords)
-end
-
 
 function insert_new_particles_sphere(oct, nParticles, coords, S, dt)
 # #(! function input parameters are changed)
@@ -254,5 +216,7 @@ function time_step(temperature,mass)
   return sqrt(8.0*k_boltz*temperature/pi/mass)/500.0
 end
 
+insert_new_particles = insert_new_particles_body
+#insert_new_particles = insert_new_particles_sphere
 
 end

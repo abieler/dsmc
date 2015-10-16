@@ -1,6 +1,7 @@
 module Types
 
-export Cell,
+export UserSettings,
+       Cell,
        Block,
        Point3D,
        Particle,
@@ -13,6 +14,25 @@ export Cell,
 const _x = 1
 const _y = 2
 const _z = 3
+
+
+type UserSettings
+  nIterations::Int64
+  meshFileName::ASCIIString
+  domainSizeX::Float64
+  domainSizeY::Float64
+  domainSizeZ::Float64
+  nCellsPerBlockX::Int64
+  nCellsPerBlockY::Int64
+  nCellsPerBlockZ::Int64
+  nMaxRefinementLevel::Int64
+  nMaxTrianglesPerCell::Int64
+  nNewParticlesPerIteration::Int64
+end
+
+# default user settings
+UserSettings() = UserSettings(200, "../input/sphere2.ply", 200.0, 200.0, 200.0,
+                              5, 5, 5, 3, 1, 5000)
 
 
 type Triangle

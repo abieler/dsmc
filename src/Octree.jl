@@ -3,19 +3,44 @@ using Triangles
 using Types
 using RayTrace
 
-export split_block,
-       insert_cells,
-       block_containing_point,
+export initialize_domain,
+       refine_domain,
        cell_containing_point,
-       populate_blocks,
-       out_of_bounds,
-       count_cells,
-       refine_tree,
-       octree_slice!,
-       all_cells!,
-       is_out_of_bounds,
-       cut_cell_volume!,
-       label_cells!
+       is_out_of_bounds
+
+
+function initialize_domain(mySettings)
+  origin = zeros(Float64, 3)
+  halfSize = [mySettings.domainSizeX, mySettings.domainSizeY, mySettings.domainSizeZ]
+  nCellsX = mySettings.nCellsPerBlockX
+  nCellsY = mySettings.nCellsPerBlockY
+  nCellsZ = mySettings.nCellsPerBlockZ
+  isLeaf = true
+  refLevel = 0
+
+  oct = Block(origin, halfSize, isLeaf, Array(Block,8), Cell[], refLevel,
+              nCellsX, nCellsY, nCellsZ)
+
+  #split octree into 8 children
+  split_block(oct)
+  return oct
+end
+
+function refine_domain(oct, allTriangles, mySettings)
+  iMax = mySettings.nMaxRefinementLevel
+  nMaxTriangles = mySettings.nMaxTrianglesPerCell
+
+  assign_triangles!(oct, allTriangles)
+  for i=1:iMax
+    refine_tree(oct, nMaxTriangles)
+    assign_triangles!(oct, allTriangles)
+  end
+  pStart = [150.0, 0.0, 0.0]
+  @time cut_cell_volume!(oct, pStart, 2000)
+
+  # give every cell a unique ID
+  label_cells!(oct)
+end
 
 function label_cells!(oct, maxLabel=0)
  for block in oct.children

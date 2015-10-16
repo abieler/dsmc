@@ -5,22 +5,13 @@ using Types
 
 include("Physical.jl")
 include("io.jl")
+include("user.jl")
 
 lostParticles = Particle[]
 myPoint = zeros(Float64,3)
 
-nTriangles, allTriangles, surfaceArea = load_ply_file("../input/sphere2.ply")
 
-################################################################################
-# initialize simulation domain
-################################################################################
-origin = zeros(Float64, 3)
-halfSize = ones(Float64, 3) * 20.0 #5000.0e3
-nCellsX = 5
-nCellsY = 5
-nCellsZ = 5
-isLeaf = true
-refLevel = 0
+
 ################################################################################
 # initialize source, time step, particle, weight, number of rep particles???
 ################################################################################
@@ -35,45 +26,32 @@ println("TimeStep: ", DELTA)
 w_factor = constant_weight(DELTA,Source,28.0*amu)
 println(w_factor)
 
-oct = Block(origin, halfSize, isLeaf, Array(Block,8), Cell[], refLevel,
-            nCellsX, nCellsY, nCellsZ)
+################################################################################
+# load shape model
+################################################################################
+nTriangles, allTriangles, surfaceArea = load_ply_file("../input/sphere2.ply")
 
-#split octree into 8 children
-split_block(oct)
+################################################################################
+# initialize simulation domain
+################################################################################
+oct = initialize_domain(mySettings)
 
 ################################################################################
 # refine domain and compute volume of cut cells
 ################################################################################
-assign_triangles!(oct, allTriangles)
-for i=1:3
-  refine_tree(oct, 1)
-  assign_triangles!(oct, allTriangles)
-end
-pStart = [150.0, 0.0, 0.0]
-@time cut_cell_volume!(oct, pStart, 2000)
-
-################################################################################
-# give every cell a unique ID
-################################################################################
-label_cells!(oct)
+refine_domain(oct, allTriangles, mySettings)
 
 ################################################################################
 # main loop
 ################################################################################
-nParticles = 500
-for iteration = 1:4
-  println("iteration: ", iteration)
-  #insert_new_particles(oct, nParticles, myPoint)
-  if iteration == 1
-    #insert_new_particles_sphere(oct, nParticles, myPoint,Source,DELTA)
-    @time insert_new_particles_body(oct, allTriangles, nParticles, myPoint)
-const nParticles = 20000
+const nParticles = mySettings.nNewParticlesPerIteration
 const f = nParticles / surfaceArea
 
-for iteration = 1:50
+for iteration = 1:mySettings.nIterations
+  println("iteration: ", iteration)
   if iteration >= 1
-    #insert_new_particles_sphere(oct, nParticles, myPoint)
-    insert_new_particles_body(oct, allTriangles, f, myPoint)
+    #insert_new_particles(oct, nParticles, myPoint, Source, DELTA)
+    insert_new_particles(oct, allTriangles, f, myPoint)
   end
   if iteration % 20 == 1
     save_particles(oct, "../output/particles_" *string(iteration)* ".csv")
