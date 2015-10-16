@@ -59,7 +59,9 @@ function load_ply_file(fileName::ASCIIString)
                    triAreas[i], n_hat[1:3,i])
     allTriangles[i] = tri
   end
-  return nTriangles, allTriangles
+
+  totalSurfaceArea = sum(triAreas)
+  return nTriangles, allTriangles, totalSurfaceArea
 end
 
 function save2vtk(oct)
@@ -81,37 +83,25 @@ function save2vtk(oct)
   epsilon = 1e-10
   coord = zeros(Float64,3)
 
-  #fill in first coordinate. --> needs to be a non empty list to later be
-  # able to loop over
-  nodeCoords = Point3D[]
-  cell = allCells[1]
-  for i=1:3
-    coord[i] = cell.nodes[i,1]
-  end
-  push!(nodeCoords, Point3D(coord[1], coord[2], coord[3]))
-
+  #uniqueCoords = Set{Vector{Float64}}()
+  uniqueCoords = Vector{Float64}[]
+  allIndexes = zeros(Int64, 8, nCells)
+  jj = 1
   for cell in allCells
-    for nNode = 1:8
+    for nNode=1:8
       for i=1:3
         coord[i] = cell.nodes[i,nNode]
       end
-
-      sameScore = 0
-      for i=1:length(nodeCoords)
-        cond1 = (coord[1]-epsilon <= nodeCoords[i].x <= coord[1]+epsilon)
-        cond2 = (coord[2]-epsilon <= nodeCoords[i].y <= coord[2]+epsilon)
-        cond3 = (coord[3]-epsilon <= nodeCoords[i].z <= coord[3]+epsilon)
-        if (cond1 & cond2 & cond3)
-          sameScore += 1
-          break
-        end
-      end
-      if sameScore == 0
-        push!(nodeCoords, Point3D(coord[1], coord[2], coord[3]))
+      if !in(coord, uniqueCoords)
+        push!(uniqueCoords, coord)
+        allIndexes[nNode, jj] = length(uniqueCoords)-1
+      else
+        allIndexes[nNode, jj] = find(x -> x == coord, uniqueCoords)-1
       end
     end
   end
-  nUniqueCoords = length(nodeCoords)
+
+  nUniqueCoords = length(uniqueCoords)
   println("nUniqueCoords: ", nUniqueCoords)
 
   allIndexes = zeros(Int64, 8, nCells)
@@ -120,14 +110,16 @@ function save2vtk(oct)
   for cell in allCells
     for nNode = 1:8
       kk = 0
-      for p in nodeCoords
-        if ((cell.nodes[1,nNode] == p.x) & (cell.nodes[2,nNode] == p.y) & (cell.nodes[3,nNode] == p.z))
+      for p in uniqueCoords
+        if (cell.nodes[:, nNode] == p)
+          #if ((cell.nodes[1,nNode] == p.x) & (cell.nodes[2,nNode] == p.y) & (cell.nodes[3,nNode] == p.z))
           allIndexes[nNode, jj] = kk
           break
         end
         kk += 1
       end
     end
+    println(jj)
     jj += 1
   end
 

@@ -31,7 +31,6 @@ function next_pos!(p::Particle, dt, pos)
   pos[3] = p.z + dt * p.vz
 end
 
-
 function gas_surface_collisions!(block)
     for child in block.children
       if child.isLef
@@ -41,11 +40,13 @@ function gas_surface_collisions!(block)
 
 end
 
-function insert_new_particles_body(oct, allTriangles, nParticles, coords)
+function insert_new_particles_body(oct, allTriangles, f, coords)
   particleMass = 18.0
   w_factor = 1.0
+  speed = 10.0
+  cellID = 0
   for tri in allTriangles
-    N = round(Int, tri.area * nParticles)
+    N = round(Int, tri.area * f)
     newParticles = Array(Particle, N)
     for i=1:N
       pick_point!(tri, coords)
@@ -190,14 +191,16 @@ function time_step(oct::Block, lostParticles)
 end
 
 function perform_time_step(b::Block, lostParticles)
-  dt = 0.1
+  dt = 0.02
   coords = zeros(Float64, 3)
   pos = zeros(Float64, 3)
   for cell in b.cells
     nParticles = length(cell.particles)
     if nParticles > 0
       for p in copy(cell.particles)
-        move!(p, dt)
+        if p.cellID == cell.ID
+          move!(p, dt)
+        end
         wasAssigned = assign_particle!(b, p, coords)
         if !wasAssigned
           push!(lostParticles, p)
@@ -216,6 +219,7 @@ function assign_particles!(oct, particles, coords)
     if !is_out_of_bounds(oct, coords)
       foundCell, cell = cell_containing_point(oct, coords)
       if foundCell
+        p.cellID = cell.ID
         push!(cell.particles, p)
       end
     end
@@ -230,6 +234,7 @@ function assign_particle!(oct, p, coords)
     coords[3] = p.z
     foundCell, cell = cell_containing_point(oct, coords)
     if foundCell
+      p.cellID = cell.ID
       push!(cell.particles, p)
       return true
     else

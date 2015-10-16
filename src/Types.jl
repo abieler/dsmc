@@ -24,6 +24,7 @@ type Triangle
 end
 
 type Particle
+  cellID::Int64
   x::Float64
   y::Float64
   z::Float64
@@ -35,6 +36,7 @@ type Particle
 end
 
 type Cell
+    ID::Int64
     origin::Vector{Float64}
     halfSize::Vector{Float64}
     nodes::Array{Float64,2}

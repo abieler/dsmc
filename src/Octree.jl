@@ -14,7 +14,21 @@ export split_block,
        octree_slice!,
        all_cells!,
        is_out_of_bounds,
-       cut_cell_volume!
+       cut_cell_volume!,
+       label_cells!
+
+function label_cells!(oct, maxLabel=0)
+ for block in oct.children
+   if block.isLeaf
+     for cell in block.cells
+       cell.ID = maxLabel
+       maxLabel += 1
+     end
+   else
+     label_cells!(block, maxLabel)
+   end
+ end
+end
 
 function cut_cell_volume!(oct, pStart, N)
   pRandom = zeros(Float64, 3)
@@ -122,11 +136,12 @@ function insert_cells(b::Block)
   ly = b.halfSize[2]*2/b.ny
   lz = b.halfSize[3]*2/b.nz
   volume = lx*ly*lz
+  ID = 0
   for iz = 0:b.nz-1
     for iy = 0:b.ny-1
       for ix = 0:b.nx-1
-        cell = Cell(zeros(Float64,3), zeros(Float64,3), zeros(Float64,3,8), volume,
-                    zeros(Float64,8), Triangle[], false, Particle[])
+        cell = Cell(ID, zeros(Float64,3), zeros(Float64,3), zeros(Float64,3,8),
+                    volume, zeros(Float64,8), Triangle[], false, Particle[])
 
         cell.origin[1] = 0.5 * lx + ix * lx + b.origin[1] - b.halfSize[1]
         cell.origin[2] = 0.5 * ly + iy * ly + b.origin[2] - b.halfSize[2]

@@ -1,0 +1,36 @@
+General use:
+
+* get the repository the first time:
+  git clone https://github.com/abieler/dsmc.git
+
+
+* modifying the file fileName.jl and commiting changes:
+  git add fileName.jl
+  git commit fileName.jl
+  git push
+
+
+* creating a new branch:
+  git checkout -b newBranchName
+  (then normally do the git add and commits to work in 
+  the new branch)
+
+
+* push your new branch to remote:
+  git push --set-upstream origin newBranchName
+  
+
+* get branch from remote to your local box
+  git fetch origin branchName
+  git checkout branchName
+
+
+* changing between branches:
+  git checkout branchName
+  git checkout master (to check back to master)
+
+
+* merging new branch with master:
+  git checkout master (change back to master branch)
+  git merge newBranchName
+  git branch -d newBranchName (delete branch) 
