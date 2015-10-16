@@ -40,6 +40,7 @@ function insert_new_particles_body(oct, allTriangles, f, coords)
   particleMass = 18.0
   w_factor = 1.0
   speed = 10.0
+  cellID = 0
   for tri in allTriangles
     N = round(Int, tri.area * f)
     newParticles = Array(Particle, N)
@@ -51,7 +52,7 @@ function insert_new_particles_body(oct, allTriangles, f, coords)
       vx = tri.surfaceNormal[1] * speed
       vy = tri.surfaceNormal[2] * speed
       vz = tri.surfaceNormal[3] * speed
-      newParticles[i] = Particle(x, y, z, vx, vy, vz, particleMass, w_factor)
+      newParticles[i] = Particle(cellID, x, y, z, vx, vy, vz, particleMass, w_factor)
     end
     assign_particles!(oct, newParticles, coords)
   end
@@ -193,7 +194,7 @@ function time_step(oct, lostParticles)
 end
 
 function perform_time_step(b::Block, lostParticles)
-  dt = 0.1
+  dt = 0.01
   coords = zeros(Float64, 3)
   pos = zeros(Float64, 3)
   for cell in b.cells
@@ -222,6 +223,7 @@ function assign_particles!(oct, particles, coords)
     if !is_out_of_bounds(oct, coords)
       foundCell, cell = cell_containing_point(oct, coords)
       if foundCell
+        p.cellID = cell.ID
         push!(cell.particles, p)
       end
     end
@@ -234,10 +236,13 @@ function assign_particle!(oct, p, coords)
     coords[1] = p.x
     coords[2] = p.y
     coords[3] = p.z
+    oldCellID = p.cellID
     foundCell, cell = cell_containing_point(oct, coords)
     if foundCell
-      push!(cell.particles, p)
-      return true
+      if p.cellID == oldCellID
+        push!(cell.particles, p)
+        return true
+      end
     else
       return false
     end

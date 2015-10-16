@@ -8,13 +8,13 @@ include("io.jl")
 lostParticles = Particle[]
 myPoint = zeros(Float64,3)
 
-nTriangles, allTriangles, surfaceArea = load_ply_file("../input/sphere2.ply")
+nTriangles, allTriangles, surfaceArea = load_ply_file("../input/cow.ply")
 
 ################################################################################
 # initialize simulation domain
 ################################################################################
 origin = zeros(Float64, 3)
-halfSize = ones(Float64, 3) * 200
+halfSize = ones(Float64, 3) * 10
 nCellsX = 5
 nCellsY = 5
 nCellsZ = 5
@@ -39,9 +39,14 @@ pStart = [150.0, 0.0, 0.0]
 @time cut_cell_volume!(oct, pStart, 2000)
 
 ################################################################################
+# give every cell a unique ID
+################################################################################
+label_cells!(oct)
+
+################################################################################
 # main loop
 ################################################################################
-const nParticles = 5000
+const nParticles = 20000
 const f = nParticles / surfaceArea
 
 println("f: ", f)
@@ -52,7 +57,7 @@ for iteration = 1:200
     #insert_new_particles_sphere(oct, nParticles, myPoint)
     insert_new_particles_body(oct, allTriangles, f, myPoint)
   end
-  if iteration % 20 == 0
+  if iteration % 20 == 1
     save_particles(oct, "../output/particles_init_" *string(iteration)* ".csv")
   end
   compute_macroscopic_params(oct)
@@ -66,4 +71,4 @@ end
 ################################################################################
 # save results
 ################################################################################
-save2vtk(oct)
+#save2vtk(oct)
