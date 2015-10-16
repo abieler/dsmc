@@ -5,6 +5,7 @@ export Cell,
        Point3D,
        Particle,
        Triangle,
+       UniformSource,
        _x,
        _y,
        _z
@@ -60,6 +61,14 @@ type Point3D
     x::Float64
     y::Float64
     z::Float64
+end
+
+
+immutable UniformSource
+  SourceRadius::Float64        #Exospheric Source
+  SourceMass::Float64
+  SourceDensity::Float64                   #INMS N2 data at 1430 km
+  SourceTemperature::Float64
 end
 
 end
