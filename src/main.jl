@@ -10,8 +10,6 @@ include("user.jl")
 lostParticles = Particle[]
 myPoint = zeros(Float64,3)
 
-
-
 ################################################################################
 # initialize source, time step, particle, weight, number of rep particles???
 ################################################################################
@@ -29,7 +27,7 @@ println(w_factor)
 ################################################################################
 # load shape model
 ################################################################################
-nTriangles, allTriangles, surfaceArea = load_ply_file("../input/sphere2.ply")
+nTriangles, allTriangles, surfaceArea = load_ply_file(mySettings.meshFileName)
 
 ################################################################################
 # initialize simulation domain
@@ -51,7 +49,7 @@ for iteration = 1:mySettings.nIterations
   println("iteration: ", iteration)
   if iteration >= 1
     #insert_new_particles(oct, nParticles, myPoint, Source, DELTA)
-    insert_new_particles(oct, allTriangles, f, myPoint)
+    insert_new_particles(oct, allTriangles, f, myPoint, Source)
   end
   if iteration % 20 == 1
     save_particles(oct, "../output/particles_" *string(iteration)* ".csv")
@@ -60,8 +58,6 @@ for iteration = 1:mySettings.nIterations
   @time time_step(oct, lostParticles)
   @time assign_particles!(oct, lostParticles, myPoint)
   lostParticles = Particle[]
-  println(iteration)
-  println()
 end
 
 ################################################################################

@@ -35,10 +35,9 @@ function gas_surface_collisions!(block)
    end
 end
 
-function insert_new_particles_body(oct, allTriangles, f, coords)
-  particleMass = 18.0
+function insert_new_particles_body(oct, allTriangles, f, coords, S)
+  particleMass = 18.0 * amu
   w_factor = 1.0
-  speed = 10.0
   cellID = 0
   for tri in allTriangles
     N = round(Int, tri.area * f)
@@ -48,9 +47,11 @@ function insert_new_particles_body(oct, allTriangles, f, coords)
       x = coords[1]
       y = coords[2]
       z = coords[3]
-      vx = tri.surfaceNormal[1]
-      vy = tri.surfaceNormal[2]
-      vz = tri.surfaceNormal[3]
+      #vx = tri.surfaceNormal[1]
+      #vy = tri.surfaceNormal[2]
+      #vz = tri.surfaceNormal[3]
+ 	    vx, vy, vz = maxwell_boltzmann_flux_v(S.SourceTemperature, particleMass)
+      vx, vy, vz = rotate_vec_to_pos(vx, vy, vz, x, y, z)
       newParticles[i] = Particle(cellID, x, y, z, vx, vy, vz, particleMass, w_factor)
     end
     assign_particles!(oct, newParticles, coords)
@@ -65,7 +66,7 @@ function insert_new_particles_sphere(oct, nParticles, coords, S, dt)
    particleMassN2 = zeros(Float64, nParticles)
    particleMass = 28.0*amu
    w_factor = constant_weight(dt,S,particleMass)
-   println("start loop:")
+   cellID = 0
    for i=1:nParticles
      theta = 2.0*pi*rand()
      phi = acos(2.0*rand()-1.0)
@@ -74,7 +75,7 @@ function insert_new_particles_sphere(oct, nParticles, coords, S, dt)
  	   zInit=S.SourceRadius*cos(phi)
  	   vxInit,vyInit,vzInit=maxwell_boltzmann_flux_v(S.SourceTemperature,particleMass)
      vxInit,vyInit,vzInit = rotate_vec_to_pos(vxInit,vyInit,vzInit,xInit,yInit,zInit)
-     newParticles[i] = Particle(xInit, yInit, zInit,
+     newParticles[i] = Particle(cellID, xInit, yInit, zInit,
               vxInit, vyInit, vzInit,
                  particleMassN2[i], w_factor)  #18 mass in amu, #Weight factor
   end
@@ -87,16 +88,16 @@ end
 # ############################
  function maxwell_boltzmann_flux_v(temperature,mass)
   velmax = 3000.0
-  beta::Float64 = mass/2.0/k_boltz/temperature
+  beta::Float64 = mass / 2.0 / k_boltz / temperature
   prb::Float64 = 0.0
   r = 1.0
 
   vel = 0.0
-  ii = 0
+  C = (1.5/beta)^(1.5)*exp(-1.5)
   while r > prb
-     vel = rand()*velmax
-     a = vel*vel*beta
-     prb = vel^3.0*exp(-a)/((1.5/beta)^(1.5)*exp(-1.5))
+     vel = rand() * velmax
+     a = vel * vel * beta
+     prb = vel^3.0 * exp(-a) / C
      r = rand()
    end
    theta = 2.0*pi*rand()
@@ -153,7 +154,7 @@ function time_step(oct::Block, lostParticles)
 end
 
 function perform_time_step(b::Block, lostParticles)
-  dt = 0.02
+  dt = 0.002
   coords = zeros(Float64, 3)
   pos = zeros(Float64, 3)
   for cell in b.cells
