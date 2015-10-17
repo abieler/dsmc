@@ -2,6 +2,7 @@ using Triangles
 using Octree
 
 function load_ply_file(fileName::ASCIIString)
+  println(" - loading surface mesh...")
   nNodes::Int64 = 0
   nTriangles::Int64 = 0
   iHeader::Int64 = 0
@@ -21,9 +22,9 @@ function load_ply_file(fileName::ASCIIString)
   end
   close(iFile)
 
-  println("nNodes: ", nNodes)
-  println("nTriangles : ", nTriangles)
-  println("iHeader: ", iHeader)
+  println("       nNodes: ", nNodes)
+  println("       nTriangles : ", nTriangles)
+  println("       iHeader: ", iHeader)
 
   nodeCoords = zeros(Float64, 3, nNodes)
   triIndices = zeros(Int64, 3, nTriangles)

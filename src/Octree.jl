@@ -26,21 +26,6 @@ function initialize_domain(mySettings)
   return oct
 end
 
-function refine_domain(oct, allTriangles, mySettings)
-  iMax = mySettings.nMaxRefinementLevel
-  nMaxTriangles = mySettings.nMaxTrianglesPerCell
-
-  assign_triangles!(oct, allTriangles)
-  for i=1:iMax
-    refine_tree(oct, nMaxTriangles)
-    assign_triangles!(oct, allTriangles)
-  end
-  pStart = [150.0, 0.0, 0.0]
-  @time cut_cell_volume!(oct, pStart, 2000)
-
-  # give every cell a unique ID
-  label_cells!(oct)
-end
 
 function label_cells!(oct, maxLabel=0)
  for block in oct.children
@@ -54,6 +39,51 @@ function label_cells!(oct, maxLabel=0)
    end
  end
 end
+
+
+function refine_domain(oct, allTriangles, mySettings)
+  iMax = mySettings.nMaxRefinementLevel
+  nMaxTriangles = mySettings.nMaxTrianglesPerCell
+  println(" - refining domain...")
+  assign_triangles!(oct, allTriangles)
+  for i=1:iMax
+    refine_tree(oct, nMaxTriangles)
+    assign_triangles!(oct, allTriangles)
+  end
+  pStart = [0.0, 0.0, 0.0]
+  println(" - calculating cut cell volumes...")
+  cut_cell_volume!(oct, pStart, 2000)
+  label_cells!(oct)
+end
+
+function pick_pos_in_flow_filed(cell, pStart, pStop, vStartStop)
+  # define pStart as the point from the triangle center along the surface
+  # normal for a small dr. (this dr has to be cleverly picked in the future).
+  # as stop points cycle through the cell vertexes, if one vertex is found that
+  # lies in the flow field, stop.
+  # this assumes the triangle surface normal points outwards of the body.
+  l = norm(cell.halfSize) / 100.0
+  counter = 0
+
+  foundPoint = false
+  for tri in cell.triangles
+    for i=1:3
+      pStart[i] = tri.center[i] + tri.surfaceNormal[i] / 1.0e-3
+    end
+    for k=1:8
+      for i=1:3
+        pStop[i] = cell.nodes[i,k]
+        vStartStop[i] = pStop[i] - pStart[i]
+      end
+      counter = nTrianglesIntersects(cell.triangles, pStart, pStop, vStartStop)
+      if (counter % 2) == 0
+        return true
+      end
+    end
+  end
+  return false
+end
+
 
 function cut_cell_volume!(oct, pStart, N)
   pRandom = zeros(Float64, 3)
@@ -72,6 +102,12 @@ function cut_cell_volume!(oct, pStart, N)
           dx = (xMax - xMin) / 1000.0
           dy = (yMax - yMin) / 1000.0
           dz = (zMax - zMin) / 1000.0
+
+          # this function modifies pStart so that it is outside the body.
+          pStartFound = pick_pos_in_flow_filed(cell, pRandom, pStart, vRandom)
+          if !pStartFound
+            println("no point in flow field found!!!")
+          end
 
           counter = 0
           x = rand(xMin:dx:xMax,N)
