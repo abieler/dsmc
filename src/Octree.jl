@@ -6,7 +6,8 @@ using RayTrace
 export initialize_domain,
        refine_domain,
        cell_containing_point,
-       is_out_of_bounds
+       is_out_of_bounds,
+       all_cells!
 
 
 function initialize_domain(mySettings)
