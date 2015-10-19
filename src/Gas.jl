@@ -1,4 +1,3 @@
-
 module Gas
 using Distributions
 using Octree
