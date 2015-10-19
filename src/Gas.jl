@@ -11,6 +11,7 @@ export move!,
        assign_particles!,
        compute_macroscopic_params,
        time_step,
+       time_step2,
        constant_weight
 
 
@@ -141,24 +142,30 @@ function compute_params(block)
   end
 end
 
-function time_step(oct::Block, lostParticles)
+function time_step(oct::Block, lostParticles, particle_buffer)
   for block in oct.children
     if block.isLeaf == 1
-      perform_time_step(block, lostParticles)
+      perform_time_step(block, lostParticles, particle_buffer)
     else
-      time_step(block, lostParticles)
+      time_step(block, lostParticles, particle_buffer)
     end
   end
 end
 
-function perform_time_step(b::Block, lostParticles)
+function perform_time_step(b::Block, lostParticles, particle_buffer)
   dt = 0.005
   coords = zeros(Float64, 3)
   pos = zeros(Float64, 3)
   for cell in b.cells
     nParticles = length(cell.particles)
     if nParticles > 0
-      for p in copy(cell.particles)
+      if nParticles > length(particle_buffer)
+        particle_buffer = Array(Particle, nParticles)
+      end
+      for i = 1:nParticles
+        particle_buffer[i] = cell.particles[i]
+      end
+      for p in particle_buffer[1:nParticles]
         if p.cellID == cell.ID
           move!(p, dt)
         end

@@ -10,6 +10,8 @@ include("user.jl")
 lostParticles = Particle[]
 myPoint = zeros(Float64,3)
 
+particle_buffer = Array(Particle, 400)
+
 ################################################################################
 # initialize source, time step, particle, weight, number of rep particles???
 ################################################################################
@@ -19,8 +21,8 @@ density = 4.48e13
 temperature = 161.0
 Source = UniformSource(bodyradius,bodymass,density,temperature)
 DELTA=time_step(Source.SourceTemperature,28.0*amu)
-println("SourceTemperature: ", Source.SourceTemperature)
-println("TimeStep: ", DELTA)
+println(" - SourceTemperature: ", Source.SourceTemperature)
+println(" - TimeStep: ", DELTA)
 w_factor = constant_weight(DELTA,Source,28.0*amu)
 println(w_factor)
 
@@ -55,8 +57,8 @@ for iteration = 1:mySettings.nIterations
     save_particles(oct, "../output/particles_" *string(iteration)* ".csv")
   end
   compute_macroscopic_params(oct)
-  @time time_step(oct, lostParticles)
-  @time assign_particles!(oct, lostParticles, myPoint)
+  @time time_step(oct, lostParticles, particle_buffer)
+  assign_particles!(oct, lostParticles, myPoint)
   lostParticles = Particle[]
 end
 
