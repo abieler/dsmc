@@ -22,9 +22,9 @@ function load_ply_file(fileName::ASCIIString)
   end
   close(iFile)
 
-  println("       nNodes: ", nNodes)
+  println("       nNodes     : ", nNodes)
   println("       nTriangles : ", nTriangles)
-  println("       iHeader: ", iHeader)
+  println("       iHeader    : ", iHeader)
 
   nodeCoords = zeros(Float64, 3, nNodes)
   triIndices = zeros(Int64, 3, nTriangles)
@@ -145,12 +145,24 @@ function save2vtk(oct)
   end
   write(oFile, "\n")
   write(oFile, "CELL_DATA " * string(nCells) * "\n")
-  write(oFile, "SCALARS density float\n")
-  write(oFile, "LOOKUP_TABLE default\n")
+  #write(oFile, "SCALARS density float\n")
+  #write(oFile, "LOOKUP_TABLE default\n")
+  write(oFile, "FIELD scalarField 3\n")
 
+  write(oFile, "numberDensity 1 " * string(nCells) * " float\n")
   for i=1:nCells
     write(oFile, string(allCells[i].data[1]) * "\n")
   end
+  write(oFile, "cellVolume 1 " * string(nCells) * " float\n")
+  for i=1:nCells
+    write(oFile, string(allCells[i].volume) * "\n")
+  end
+
+  write(oFile, "nParticlesInCell 1 " * string(nCells) * " float\n")
+  for i=1:nCells
+    write(oFile, string(length(allCells[i].particles)) * "\n")
+  end
+
   close(oFile)
 end
 

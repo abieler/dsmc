@@ -60,7 +60,6 @@ end
 
 function insert_new_particles_sphere(oct, nParticles, coords, S, dt)
 # #(! function input parameters are changed)
-  println("dt: ", dt)
    newParticles = Array(Particle, nParticles)
 
    particleMassN2 = zeros(Float64, nParticles)
@@ -154,7 +153,7 @@ function time_step(oct::Block, lostParticles)
 end
 
 function perform_time_step(b::Block, lostParticles)
-  dt = 0.002
+  dt = 0.005
   coords = zeros(Float64, 3)
   pos = zeros(Float64, 3)
   for cell in b.cells
