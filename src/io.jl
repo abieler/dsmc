@@ -2,6 +2,7 @@ using Triangles
 using Octree
 
 function load_ply_file(fileName::ASCIIString)
+  println(" - loading surface mesh...")
   nNodes::Int64 = 0
   nTriangles::Int64 = 0
   iHeader::Int64 = 0
@@ -21,9 +22,9 @@ function load_ply_file(fileName::ASCIIString)
   end
   close(iFile)
 
-  println("nNodes: ", nNodes)
-  println("nTriangles : ", nTriangles)
-  println("iHeader: ", iHeader)
+  println("       nNodes     : ", nNodes)
+  println("       nTriangles : ", nTriangles)
+  println("       iHeader    : ", iHeader)
 
   nodeCoords = zeros(Float64, 3, nNodes)
   triIndices = zeros(Int64, 3, nTriangles)
@@ -86,42 +87,26 @@ function save2vtk(oct)
   #uniqueCoords = Set{Vector{Float64}}()
   uniqueCoords = Vector{Float64}[]
   allIndexes = zeros(Int64, 8, nCells)
+  allIndexesVTK = zeros(Int64, 8, nCells)
   jj = 1
+  println("nCells: ", nCells)
   for cell in allCells
     for nNode=1:8
       for i=1:3
         coord[i] = cell.nodes[i,nNode]
       end
-      if !in(coord, uniqueCoords)
-        push!(uniqueCoords, coord)
+      if !in(uniqueCoords, coord)
+        push!(uniqueCoords, copy(coord))
         allIndexes[nNode, jj] = length(uniqueCoords)-1
       else
-        allIndexes[nNode, jj] = find(x -> x == coord, uniqueCoords)-1
+        allIndexes[nNode, jj] = findfirst(x -> x == coord, uniqueCoords)-1
       end
     end
+    jj+=1
   end
 
   nUniqueCoords = length(uniqueCoords)
   println("nUniqueCoords: ", nUniqueCoords)
-
-  allIndexes = zeros(Int64, 8, nCells)
-  allIndexesVTK = zeros(Int64, 8, nCells)
-  jj = 1
-  for cell in allCells
-    for nNode = 1:8
-      kk = 0
-      for p in uniqueCoords
-        if (cell.nodes[:, nNode] == p)
-          #if ((cell.nodes[1,nNode] == p.x) & (cell.nodes[2,nNode] == p.y) & (cell.nodes[3,nNode] == p.z))
-          allIndexes[nNode, jj] = kk
-          break
-        end
-        kk += 1
-      end
-    end
-    println(jj)
-    jj += 1
-  end
 
   for i=1:nCells
     for k=1:8
@@ -136,13 +121,10 @@ function save2vtk(oct)
   write(oFile, "\n")
   write(oFile, "DATASET UNSTRUCTURED_GRID\n")
   write(oFile, "POINTS " * string(nUniqueCoords) * " float\n")
-  nodeCoords_array = zeros(Float64, 3, length(nodeCoords))
+  #nodeCoords_array = zeros(Float64, 3, length(uniqueCoords))
   i=1
-  for p in nodeCoords
-    write(oFile, string(p.x), " ", string(p.y), " ", string(p.z), "\n")
-    nodeCoords_array[1, i] = p.x
-    nodeCoords_array[2, i] = p.y
-    nodeCoords_array[3, i] = p.z
+  for p in uniqueCoords
+    write(oFile, string(p[1]), " ", string(p[2]), " ", string(p[3]), "\n")
     i+=1
   end
   write(oFile, "\n")
@@ -155,23 +137,32 @@ function save2vtk(oct)
     end
     write(oFile, string(allIndexesVTK[8,i]) * "\n")
   end
-
   write(oFile, "\n")
 
   write(oFile, "CELL_TYPES " *string(nCells) * "\n")
   for i=1:nCells
     write(oFile, "11\n")
   end
-
-
   write(oFile, "\n")
   write(oFile, "CELL_DATA " * string(nCells) * "\n")
-  write(oFile, "SCALARS density float\n")
-  write(oFile, "LOOKUP_TABLE default\n")
+  #write(oFile, "SCALARS density float\n")
+  #write(oFile, "LOOKUP_TABLE default\n")
+  write(oFile, "FIELD scalarField 3\n")
 
+  write(oFile, "numberDensity 1 " * string(nCells) * " float\n")
   for i=1:nCells
     write(oFile, string(allCells[i].data[1]) * "\n")
   end
+  write(oFile, "cellVolume 1 " * string(nCells) * " float\n")
+  for i=1:nCells
+    write(oFile, string(allCells[i].volume) * "\n")
+  end
+
+  write(oFile, "nParticlesInCell 1 " * string(nCells) * " float\n")
+  for i=1:nCells
+    write(oFile, string(length(allCells[i].particles)) * "\n")
+  end
+
   close(oFile)
 end
 

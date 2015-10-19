@@ -14,9 +14,16 @@ function raytrace(oct, r, r_hat)
   doesIntersect = intersect(cell.triangles, r_hat, g)
 end
 
-function nTrianglesIntersects(triangles, p, pRandom, vRandom)
+function nTrianglesIntersects(triangles, pStart, pStop, vStartStop)
+  # check how many triangles are crossed going from pStart to pStop.
+  # vStartStop is the vector pointing from pStart to pStop.
+  # it is given to the function as placeholder that is computed inside
+  # this function --> this prevents the function to allocate a new Array
+  # every time it is called.
+  # assuming pStart is in the flow field, pStop is also in the flow field
+  # (outside the body) if an even number of triangles is corssed. if an odd
+  # number of triangles is crossed, pStop is inside the body
   nTriangles = length(triangles)
-  #println("start intersect for ", nTriangles, " triangles")
   i = 0
   j = 0
   k = 0
@@ -35,23 +42,24 @@ function nTrianglesIntersects(triangles, p, pRandom, vRandom)
   sI = 0.0
   tI = 0.0
 
+  # pI = intersect point
   pI = [0.,0.,0.]
   u = [0.,0.,0.]
   v = [0.,0.,0.]
   w = [0.,0.,0.]
 
   for i=1:3
-    vRandom[i] = pRandom[i] - p[i]
+    vStartStop[i] = pStop[i] - pStart[i]
   end
-  lRandom = norm(vRandom)
-  r = vRandom/lRandom
+  lRandom = norm(vStartStop)
+  r = vStartStop/lRandom
   counter = 0
 
   for i=1:nTriangles
     a = 0.0
     b = 0.0
     @simd for k=1:3
-      @inbounds a = a + triangles[i].surfaceNormal[k] * (triangles[i].nodes[k,1] - p[k])
+      @inbounds a = a + triangles[i].surfaceNormal[k] * (triangles[i].nodes[k,1] - pStart[k])
       @inbounds b = b + triangles[i].surfaceNormal[k] * r[k]
     end
     if ((a != 0.0) && (b != 0.0))
@@ -64,7 +72,7 @@ function nTrianglesIntersects(triangles, p, pRandom, vRandom)
         dot_wv = 0.0
 
         for k=1:3
-          @inbounds pI[k] = p[k] + rI * r[k]
+          @inbounds pI[k] = pStart[k] + rI * r[k]
           @inbounds u[k] = triangles[i].nodes[k,2] - triangles[i].nodes[k,1]
           @inbounds v[k] = triangles[i].nodes[k,3] - triangles[i].nodes[k,1]
           @inbounds w[k] = pI[k] - triangles[i].nodes[k,1]
@@ -75,15 +83,14 @@ function nTrianglesIntersects(triangles, p, pRandom, vRandom)
           @inbounds dot_wu = dot_wu + w[k]*u[k]
           @inbounds dot_wv = dot_wv + w[k]*v[k]
         end
-        lIntersect = norm(pI .- p)
+        lIntersect = norm(pI .- pStart)
         #println("tri.center: ", triangles[i].center)
-        #println("pRandom: ", p)
+        #println("pStop: ", p)
         #println("pI: ", pI)
         #println("lRandom: ", lRandom)
         #println("lIntersect: ", lIntersect)
 
         if lIntersect > lRandom
-          #println("not intersected")
           continue
         end
 
@@ -93,10 +100,8 @@ function nTrianglesIntersects(triangles, p, pRandom, vRandom)
 
         if ((tI >= 0.0) && (sI >= 0.0) && (sI + tI < 1.0))
           counter += 1
-          #println("counter += 1")
           continue
         end
-        #println()
       end
     end
   end
