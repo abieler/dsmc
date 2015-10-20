@@ -47,9 +47,6 @@ function insert_new_particles_body(oct, allTriangles, f, coords, S)
       x = coords[1]
       y = coords[2]
       z = coords[3]
-      #vx = tri.surfaceNormal[1]
-      #vy = tri.surfaceNormal[2]
-      #vz = tri.surfaceNormal[3]
  	    vx, vy, vz = maxwell_boltzmann_flux_v(S.SourceTemperature, particleMass)
       vx, vy, vz = rotate_vec_to_pos(vx, vy, vz, x, y, z)
       newParticles[i] = Particle(cellID, x, y, z, vx, vy, vz, particleMass, w_factor)
@@ -191,7 +188,6 @@ function assign_particles!(oct, particles, coords)
         push!(cell.particles, p)
       end
     end
-
   end
   return 0
 end
