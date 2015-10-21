@@ -14,6 +14,38 @@ export move!,
        time_step2,
        constant_weight
 
+function accelerate!(pos, p::Particle, accl, S)
+  r = sqrt(pos[1]^2 +pos[2]^2 + pos[3]^2)
+  accl[1] = G * S.SourceMass * p.mass * pos[1] / r^3.0
+  accl[2] = G * S.SourceMass * p.mass * pos[2] / r^3.0
+  accl[3] = G * S.SourceMass * p.mass * pos[3] / r^3.0
+end
+
+function move_RK2!(p::Particle, dt, S)
+  pos[1] = p.x
+  pos[2] = p.y
+  pos[3] = p.z
+
+  acclerate! = (pos, p, a, S)
+
+  rkPos[1] = p.x + p.vx * dt / 2.0
+  rkPos[2] = p.y + p.vy * dt / 2.0
+  rkPos[3] = p.z + p.vz * dt / 2.0
+
+  rkVel[1] = p.vx + a[1] * dt / 2.0
+  rkVel[2] = p.vy + a[2] * dt / 2.0
+  rkVel[3] = p.vz + a[3] * dt / 2.0
+
+  acclerate! = (rkPos, p, a, S)
+
+  p.x = p.x + rkVel[1] * dt
+  p.y = p.y + rkVel[2] * dt
+  p.z = p.z + rkVel[3] * dt
+
+  p.vx = p.vx + a[1] * dt
+  p.vy = p.vy + a[2] * dt
+  p.vz = p.vz + a[3] * dt
+end
 
 function move!(p::Particle, dt)
   p.x = p.x + dt * p.vx
@@ -62,21 +94,19 @@ function insert_new_particles_sphere(oct, nParticles, coords, S, dt)
 # #(! function input parameters are changed)
    newParticles = Array(Particle, nParticles)
 
-   particleMassN2 = zeros(Float64, nParticles)
    particleMass = 28.0*amu
    w_factor = constant_weight(dt,S,particleMass)
-   cellID = 0
+
+  cellID = 0
    for i=1:nParticles
      theta = 2.0*pi*rand()
      phi = acos(2.0*rand()-1.0)
-     xInit=S.SourceRadius*cos(theta)*sin(phi)
- 	   yInit=S.SourceRadius*sin(theta)*sin(phi)
- 	   zInit=S.SourceRadius*cos(phi)
- 	   vxInit,vyInit,vzInit=maxwell_boltzmann_flux_v(S.SourceTemperature,particleMass)
-     vxInit,vyInit,vzInit = rotate_vec_to_pos(vxInit,vyInit,vzInit,xInit,yInit,zInit)
-     newParticles[i] = Particle(cellID, xInit, yInit, zInit,
-              vxInit, vyInit, vzInit,
-                 particleMassN2[i], w_factor)  #18 mass in amu, #Weight factor
+     x = S.SourceRadius*cos(theta)*sin(phi)
+ 	   y = S.SourceRadius*sin(theta)*sin(phi)
+ 	   z = S.SourceRadius*cos(phi)
+ 	   vx, vy, vz = maxwell_boltzmann_flux_v(S.SourceTemperature,particleMass)
+     vx, vy, vz = rotate_vec_to_pos(vx, vy, vz, x, y, z)
+     newParticles[i] = Particle(cellID, x, y, z, vx, vy, vz, particleMass, w_factor)
   end
 
   assign_particles!(oct, newParticles, coords)
@@ -86,7 +116,7 @@ end
 # #Maxwwell Boltzmann flux velocity
 # ############################
  function maxwell_boltzmann_flux_v(temperature,mass)
-  velmax = 3000.0
+  velmax = 5000.0
   beta::Float64 = mass / 2.0 / k_boltz / temperature
   prb::Float64 = 0.0
   r = 1.0
