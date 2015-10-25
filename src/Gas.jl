@@ -11,7 +11,7 @@ export move!,
        assign_particles!,
        compute_macroscopic_params,
        time_step,
-       time_step2,
+       perform_time_step,
        constant_weight
 
 
@@ -96,7 +96,7 @@ end
      prb = vel^3.0 * exp(-a) / C
      r = rand()
    end
-   theta = 2.0*pi*rand()
+   theta = 2.0 * pi * rand()
    #polar angle determined from cosine distribution
    phi = asin(sqrt(rand()))
    vx = vel*cos(theta)*sin(phi)
@@ -147,6 +147,61 @@ function time_step(oct::Block, lostParticles, particle_buffer)
       time_step(block, lostParticles, particle_buffer)
     end
   end
+end
+
+function time_step_parallel(allBlocks, lostParticles, particle_buffer)
+    n = length(allBlocks)
+    np = nprocs()
+    i = 1
+    nextidx() = (idx=i; i+=1; idx)
+    @sync begin
+        for p=1:np
+            if p != myid() || np == 1
+                @async begin
+                    while true
+                        idx = nextidx()
+                        if idx > n
+                            break
+                        end
+                        plost = remotecall_fetch(p, perform_time_step_parallel,
+                                                 allBlocks[idx], lostParticles,
+                                                 particle_buffer)
+                        for jj =1:length(plost)
+                          push!(lostParticles, plost[jj])
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+function perform_time_step_parallel(b::Block, lostParticles, particle_buffer)
+  dt = 0.005
+  coords = zeros(Float64, 3)
+  pos = zeros(Float64, 3)
+  for cell in b.cells
+    nParticles = length(cell.particles)
+    if nParticles > 0
+      if nParticles > length(particle_buffer)
+        particle_buffer = Array(Particle, nParticles)
+      end
+      for i = 1:nParticles
+        particle_buffer[i] = cell.particles[i]
+      end
+      for p in particle_buffer[1:nParticles]
+        if p.cellID == cell.ID
+          move!(p, dt)
+        end
+        wasAssigned = assign_particle!(b, p, coords)
+        if !wasAssigned
+          push!(lostParticles, p)
+        end
+      end
+      splice!(cell.particles, 1:nParticles)
+    end
+  end
+  return lostParticles
 end
 
 function perform_time_step(b::Block, lostParticles, particle_buffer)

@@ -40,7 +40,8 @@ oct = initialize_domain(mySettings)
 # refine domain and compute volume of cut cells
 ################################################################################
 refine_domain(oct, allTriangles, mySettings)
-
+allBlocks = Block[]
+collect_blocks!(oct, allBlocks)
 ################################################################################
 # main loop
 ################################################################################
@@ -58,6 +59,7 @@ for iteration = 1:mySettings.nIterations
   end
   compute_macroscopic_params(oct)
   @time time_step(oct, lostParticles, particle_buffer)
+  #time_step_parallel(allBlocks, lostParticles, particle_buffer)
   assign_particles!(oct, lostParticles, myPoint)
   lostParticles = Particle[]
 end

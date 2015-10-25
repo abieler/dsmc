@@ -6,9 +6,20 @@ using RayTrace
 export initialize_domain,
        refine_domain,
        cell_containing_point,
+       block_containing_point,
        is_out_of_bounds,
+       collect_blocks!,
        all_cells!
 
+function collect_blocks!(oct::Block, allBlocks)
+  for child in oct.children
+    if child.isLeaf
+      push!(allBlocks, child)
+    else
+      collect_blocks!(child, allBlocks)
+    end
+  end
+end
 
 function initialize_domain(mySettings)
   origin = zeros(Float64, 3)
@@ -84,7 +95,6 @@ function pick_pos_in_flow_filed(cell, pStart, pStop, vStartStop)
   end
   return false
 end
-
 
 function cut_cell_volume!(oct, pStart, N)
   pRandom = zeros(Float64, 3)
@@ -285,13 +295,14 @@ function block_containing_point(block::Block, point::Array{Float64,1})
       return false, block
     end
     block_containing_point(block.children[oct], point)
-  elseif block.isLeaf
+  else
     if !is_out_of_bounds(block, point)
       return true, block
     else
       return false, block
     end
   end
+  
 end
 
 function cell_containing_point(oct::Block, point::Array{Float64, 1})
