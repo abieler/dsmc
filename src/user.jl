@@ -1,9 +1,9 @@
 using Types
 
 mySettings = UserSettings()
+body = MeshBody
 
 mySettings.nIterations = 100
-
 mySettings.meshFileName = "../input/sphere2.ply"
 
 mySettings.domainSizeX = 5000.0

@@ -14,6 +14,51 @@ export move!,
        perform_time_step,
        constant_weight
 
+
+function insert_new_particles(oct::Block, body::MeshBody, coords)
+ cellID = 0
+ nSpecies = length(body.particleMass)
+ for tri in body.triangles
+   for iSpecies in nSpecies
+     N = round(Int, tri.area * body.particleFlux[iSpecies])
+     newParticles = Array(Particle, N)
+     particleMass = body.particleMass[iSpecies]
+     w = body.particleWeight[iSpecies]
+     for i=1:N
+       pick_point!(tri, coords)
+       x = coords[1]
+       y = coords[2]
+       z = coords[3]
+  	    vx, vy, vz = maxwell_boltzmann_flux_v(body.temperature, particleMass)
+       vx, vy, vz = rotate_vec_to_pos(vx, vy, vz, x, y, z)
+       newParticles[i] = Particle(cellID, x, y, z, vx, vy, vz, particleMass, w)
+     end
+     assign_particles!(oct, newParticles, coords)
+   end
+ end
+end
+
+function insert_new_particles(oct::Block, body::SphericalBody, coords)
+# #(! function input parameters are changed)
+   newParticles = Array(Particle, nParticles)
+
+   particleMass = 28.0*amu
+   w_factor = constant_weight(dt,S,particleMass)
+
+  cellID = 0
+   for i=1:nParticles
+     theta = 2.0*pi*rand()
+     phi = acos(2.0*rand()-1.0)
+     x = S.SourceRadius*cos(theta)*sin(phi)
+ 	   y = S.SourceRadius*sin(theta)*sin(phi)
+ 	   z = S.SourceRadius*cos(phi)
+ 	   vx, vy, vz = maxwell_boltzmann_flux_v(S.SourceTemperature,particleMass)
+     vx, vy, vz = rotate_vec_to_pos(vx, vy, vz, x, y, z)
+     newParticles[i] = Particle(cellID, x, y, z, vx, vy, vz, particleMass, w_factor)
+  end
+
+  assign_particles!(oct, newParticles, coords)
+end
 function accelerate!(pos, p::Particle, accl, S)
   r = sqrt(pos[1]^2 +pos[2]^2 + pos[3]^2)
   accl[1] = G * S.SourceMass * p.mass * pos[1] / r^3.0
@@ -87,27 +132,6 @@ function insert_new_particles_body(oct, allTriangles, f, coords, S)
   end
 end
 
-function insert_new_particles_sphere(oct, nParticles, coords, S, dt)
-# #(! function input parameters are changed)
-   newParticles = Array(Particle, nParticles)
-
-   particleMass = 28.0*amu
-   w_factor = constant_weight(dt,S,particleMass)
-
-  cellID = 0
-   for i=1:nParticles
-     theta = 2.0*pi*rand()
-     phi = acos(2.0*rand()-1.0)
-     x = S.SourceRadius*cos(theta)*sin(phi)
- 	   y = S.SourceRadius*sin(theta)*sin(phi)
- 	   z = S.SourceRadius*cos(phi)
- 	   vx, vy, vz = maxwell_boltzmann_flux_v(S.SourceTemperature,particleMass)
-     vx, vy, vz = rotate_vec_to_pos(vx, vy, vz, x, y, z)
-     newParticles[i] = Particle(cellID, x, y, z, vx, vy, vz, particleMass, w_factor)
-  end
-
-  assign_particles!(oct, newParticles, coords)
-end
 
 # ############O.J.10-13-15###############################################
 # #Maxwwell Boltzmann flux velocity
@@ -291,7 +315,7 @@ function assign_particle!(oct, p, coords)
     end
 end
 
-function constant_weight(dt,S::UniformSource,mass)
+function constant_weight(dt,S::SphericalBody,mass)
   nParticles = 50
   vth = sqrt(8.0*k_boltz*S.SourceTemperature/pi/mass)
   Flux = pi*S.SourceRadius^2*S.SourceDensity*vth
@@ -302,8 +326,5 @@ function time_step(temperature,mass)
   ####for test purpose using path lenth of 500 should be based on cell length
   return sqrt(8.0*k_boltz*temperature/pi/mass)/500.0
 end
-
-insert_new_particles = insert_new_particles_body
-#insert_new_particles = insert_new_particles_sphere
 
 end
