@@ -7,11 +7,13 @@ using Triangles
 include("Physical.jl")
 
 export move!,
+       move2!,
        insert_new_particles,
        assign_particles!,
        compute_macroscopic_params,
        time_step,
-       time_step2,
+       time_step_serial,
+       time_step_parallel,
        constant_weight
 
 
@@ -19,6 +21,14 @@ function move!(p::Particle, dt)
   p.x = p.x + dt * p.vx
   p.y = p.y + dt * p.vy
   p.z = p.z + dt * p.vz
+end
+
+function move2!(p::Particle)
+  dt = 0.002
+  p.x = p.x + dt * p.vx
+  p.y = p.y + dt * p.vy
+  p.z = p.z + dt * p.vz
+  return 0
 end
 
 function next_pos!(p::Particle, dt, pos)
@@ -47,9 +57,6 @@ function insert_new_particles_body(oct, allTriangles, f, coords, S)
       x = coords[1]
       y = coords[2]
       z = coords[3]
-      #vx = tri.surfaceNormal[1]
-      #vy = tri.surfaceNormal[2]
-      #vz = tri.surfaceNormal[3]
  	    vx, vy, vz = maxwell_boltzmann_flux_v(S.SourceTemperature, particleMass)
       vx, vy, vz = rotate_vec_to_pos(vx, vy, vz, x, y, z)
       newParticles[i] = Particle(cellID, x, y, z, vx, vy, vz, particleMass, w_factor)
@@ -152,10 +159,76 @@ function time_step(oct::Block, lostParticles, particle_buffer)
   end
 end
 
-function perform_time_step(b::Block, lostParticles, particle_buffer)
+############################
+# serial version
+function time_step_serial(allCells)
+  for cell in allCells
+    for p in cell.particles
+      move2!(p)
+    end
+  end
+end
+
+function time_step_parallel(allCells)
+  for cell in allCells
+    d = @parallel (+) for p in cell.particles
+      move2!(p)
+    end
+  end
+end
+
+function perform_time_step_serial(b::Block, lostParticles, particle_buffer)
   dt = 0.005
   coords = zeros(Float64, 3)
   pos = zeros(Float64, 3)
+  for cell in b.cells
+    perform_time_step_cell_serial(cell, dt)
+  end
+end
+
+function perform_time_step_cell_serial(cell, dt)
+  for p in cell.particles
+    if p.cellID == cell.ID
+      move!(p, dt)
+    end
+  end
+end
+
+###################
+# parallel version
+function time_step_parallel(oct::Block, lostParticles, particle_buffer)
+  for block in oct.children
+    if block.isLeaf == 1
+      perform_time_step_parallel(block, lostParticles, particle_buffer)
+    else
+      time_step_parallel(block, lostParticles, particle_buffer)
+    end
+  end
+end
+
+function perform_time_step_parallel(b::Block, lostParticles, particle_buffer)
+  dt = 0.005
+  coords = zeros(Float64, 3)
+  pos = zeros(Float64, 3)
+
+  perform_time_step_cell_parallel(b, dt)
+end
+
+function perform_time_step_cell_parallel(b, dt)
+  pmap(fooo, b.cells, dt)
+end
+
+function fooo(cell, dt)
+  for p in cell.particles
+    if p.cellID == cell.ID
+      move2!(p)
+    end
+  end
+end
+
+######################################
+
+function perform_time_step_cell(b, lostParticles, particle_buffer, dt, coords, pos)
   for cell in b.cells
     nParticles = length(cell.particles)
     if nParticles > 0
@@ -177,6 +250,14 @@ function perform_time_step(b::Block, lostParticles, particle_buffer)
       splice!(cell.particles, 1:nParticles)
     end
   end
+end
+
+function perform_time_step(b::Block, lostParticles, particle_buffer)
+  dt = 0.005
+  coords = zeros(Float64, 3)
+  pos = zeros(Float64, 3)
+
+  perform_time_step_cell(b, lostParticles, particle_buffer, dt, coords, pos)
 end
 
 function assign_particles!(oct, particles, coords)

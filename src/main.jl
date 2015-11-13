@@ -3,12 +3,12 @@ using Triangles
 using Gas
 using Types
 
-include("Physical.jl")
-include("io.jl")
-include("user.jl")
+@everywhere include("Physical.jl")
+@everywhere include("io.jl")
+@everywhere include("user.jl")
 
 lostParticles = Particle[]
-myPoint = zeros(Float64,3)
+myPoint = zeros(Float64, 3)
 
 particle_buffer = Array(Particle, 400)
 
@@ -35,6 +35,7 @@ nTriangles, allTriangles, surfaceArea = load_ply_file(mySettings.meshFileName)
 # initialize simulation domain
 ################################################################################
 oct = initialize_domain(mySettings)
+split_block(oct)
 
 ################################################################################
 # refine domain and compute volume of cut cells
@@ -57,7 +58,7 @@ for iteration = 1:mySettings.nIterations
     save_particles(oct, "../output/particles_" *string(iteration)* ".csv")
   end
   compute_macroscopic_params(oct)
-  @time time_step(oct, lostParticles, particle_buffer)
+  time_step(oct, lostParticles, particle_buffer)
   assign_particles!(oct, lostParticles, myPoint)
   lostParticles = Particle[]
 end

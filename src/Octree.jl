@@ -6,8 +6,11 @@ using RayTrace
 export initialize_domain,
        refine_domain,
        cell_containing_point,
+       block_containing_point,
        is_out_of_bounds,
-       all_cells!
+       all_cells!,
+       split_block,
+       insert_cells
 
 
 function initialize_domain(mySettings)
@@ -23,7 +26,7 @@ function initialize_domain(mySettings)
               nCellsX, nCellsY, nCellsZ)
 
   #split octree into 8 children
-  split_block(oct)
+  #split_block(oct)
   return oct
 end
 
@@ -285,7 +288,7 @@ function block_containing_point(block::Block, point::Array{Float64,1})
       return false, block
     end
     block_containing_point(block.children[oct], point)
-  elseif block.isLeaf
+  else
     if !is_out_of_bounds(block, point)
       return true, block
     else
