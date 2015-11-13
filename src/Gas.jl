@@ -112,57 +112,7 @@ function gas_surface_collisions!(block)
    end
 end
 
-function insert_new_particles_body(oct, allTriangles, f, coords, S)
-  particleMass = 18.0 * amu
-  w_factor = 1.0
-  cellID = 0
-  for tri in allTriangles
-    N = round(Int, tri.area * f)
-    newParticles = Array(Particle, N)
-    for i=1:N
-      pick_point!(tri, coords)
-      x = coords[1]
-      y = coords[2]
-      z = coords[3]
-      #vx = tri.surfaceNormal[1]
-      #vy = tri.surfaceNormal[2]
-      #vz = tri.surfaceNormal[3]
- 	    vx, vy, vz = maxwell_boltzmann_flux_v(S.SourceTemperature, particleMass)
-      vx, vy, vz = rotate_vec_to_pos(vx, vy, vz, x, y, z)
-      newParticles[i] = Particle(cellID, x, y, z, vx, vy, vz, particleMass, w_factor)
-    end
-    assign_particles!(oct, newParticles, coords)
-  end
-end
-
-function insert_new_particles_sphere(oct, nParticles, coords, S, dt)
-# #(! function input parameters are changed)
-   newParticles = Array(Particle, nParticles)
-
-   particleMassN2 = zeros(Float64, nParticles)
-   particleMass = 28.0*amu
-   w_factor = constant_weight(dt,S,particleMass)
-   cellID = 0
-   for i=1:nParticles
-     theta = 2.0*pi*rand()
-     phi = acos(2.0*rand()-1.0)
-     xInit=S.SourceRadius*cos(theta)*sin(phi)
- 	   yInit=S.SourceRadius*sin(theta)*sin(phi)
- 	   zInit=S.SourceRadius*cos(phi)
- 	   vxInit,vyInit,vzInit=maxwell_boltzmann_flux_v(S.SourceTemperature,particleMass)
-     vxInit,vyInit,vzInit = rotate_vec_to_pos(vxInit,vyInit,vzInit,xInit,yInit,zInit)
-     newParticles[i] = Particle(cellID, xInit, yInit, zInit,
-              vxInit, vyInit, vzInit,
-                 particleMassN2[i], w_factor)  #18 mass in amu, #Weight factor
-  end
-
-  assign_particles!(oct, newParticles, coords)
-end
-
-# ############O.J.10-13-15###############################################
-# #Maxwwell Boltzmann flux velocity
-# ############################
- function maxwell_boltzmann_flux_v(temperature,mass)
+function maxwell_boltzmann_flux_v(temperature,mass)
   velmax = 3000.0
   beta::Float64 = mass / 2.0 / k_boltz / temperature
   prb::Float64 = 0.0
@@ -176,27 +126,27 @@ end
      prb = vel^3.0 * exp(-a) / C
      r = rand()
    end
-   theta = 2.0*pi*rand()
+   theta = 2.0 * pi * rand()
    #polar angle determined from cosine distribution
    phi = asin(sqrt(rand()))
-   vx = vel*cos(theta)*sin(phi)
-   vy = vel*sin(theta)*sin(phi)
-   vz = vel*cos(phi)
+   vx = vel * cos(theta) * sin(phi)
+   vy = vel * sin(theta) * sin(phi)
+   vz = vel * cos(phi)
 #   #Need to rotate vector to particle position
-   return vx,vy,vz
- end
+   return vx, vy, vz
+end
 
 function rotate_vec_to_pos(vecx,vecy,vecz,posx,posy,posz)
-	r = sqrt(posx*posx+posy*posy+posz*posz)
-	cosphi = posz/r
-	sinphi = sqrt(posx*posx+posy*posy)/r
-	costheta = posx/sinphi/r
-	sintheta = posy/sinphi/r
+  r = sqrt(posx * posx + posy * posy + posz * posz)
+  cosphi = posz / r
+  sinphi = sqrt(posx * posx + posy * posy) / r
+  costheta = posx / sinphi / r
+  sintheta = posy / sinphi / r
 
-	rotated_vectorx = vecx*costheta*cosphi-vecy*sintheta+vecz*costheta*sinphi
-	rotated_vectory = vecx*sintheta*cosphi+vecy*costheta+vecz*sintheta*sinphi
-	rotated_vectorz = -vecx*sinphi+vecz*cosphi
-    return rotated_vectorx, rotated_vectory, rotated_vectorz
+  rotated_vectorx = vecx * costheta * cosphi - vecy * sintheta + vecz * costheta * sinphi
+  rotated_vectory = vecx * sintheta * cosphi + vecy*costheta + vecz * sintheta * sinphi
+  rotated_vectorz = -vecx * sinphi + vecz * cosphi
+  return rotated_vectorx, rotated_vectory, rotated_vectorz
 end
 
 function compute_macroscopic_params(oct)
@@ -342,19 +292,16 @@ function assign_particle!(oct, p, coords)
     end
 end
 
-function constant_weight(dt,S::UniformSource,mass)
+function constant_weight(dt, S, mass)
   nParticles = 50
-  vth = sqrt(8.0*k_boltz*S.SourceTemperature/pi/mass)
-  Flux = pi*S.SourceRadius^2*S.SourceDensity*vth
-  return Flux*dt/nParticles
+  vth = sqrt(8.0 * k_boltz * S.SourceTemperature/pi/mass)
+  Flux = pi * S.SourceRadius^2 * S.SourceDensity*vth
+  return Flux * dt / nParticles
 end
 
 function time_step(temperature,mass)
   ####for test purpose using path lenth of 500 should be based on cell length
   return sqrt(8.0*k_boltz*temperature/pi/mass)/500.0
 end
-
-insert_new_particles = insert_new_particles_body
-#insert_new_particles = insert_new_particles_sphere
 
 end
