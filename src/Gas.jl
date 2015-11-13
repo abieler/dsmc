@@ -12,7 +12,8 @@ export move!,
        compute_macroscopic_params,
        time_step,
        perform_time_step,
-       constant_weight
+       constant_weight,
+       pstep
 
 
 function insert_new_particles(oct::Block, body::MeshBody, coords)
@@ -179,61 +180,6 @@ function time_step(oct::Block, lostParticles, particle_buffer)
   end
 end
 
-function time_step_parallel(allBlocks, lostParticles, particle_buffer)
-    n = length(allBlocks)
-    np = nprocs()
-    i = 1
-    nextidx() = (idx=i; i+=1; idx)
-    @sync begin
-        for p=1:np
-            if p != myid() || np == 1
-                @async begin
-                    while true
-                        idx = nextidx()
-                        if idx > n
-                            break
-                        end
-                        plost = remotecall_fetch(p, perform_time_step_parallel,
-                                                 allBlocks[idx], lostParticles,
-                                                 particle_buffer)
-                        for jj =1:length(plost)
-                          push!(lostParticles, plost[jj])
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
-
-function perform_time_step_parallel(b::Block, lostParticles, particle_buffer)
-  dt = 0.005
-  coords = zeros(Float64, 3)
-  pos = zeros(Float64, 3)
-  for cell in b.cells
-    nParticles = length(cell.particles)
-    if nParticles > 0
-      if nParticles > length(particle_buffer)
-        particle_buffer = Array(Particle, nParticles)
-      end
-      for i = 1:nParticles
-        particle_buffer[i] = cell.particles[i]
-      end
-      for p in particle_buffer[1:nParticles]
-        if p.cellID == cell.ID
-          move!(p, dt)
-        end
-        wasAssigned = assign_particle!(b, p, coords)
-        if !wasAssigned
-          push!(lostParticles, p)
-        end
-      end
-      splice!(cell.particles, 1:nParticles)
-    end
-  end
-  return lostParticles
-end
-
 function perform_time_step(b::Block, lostParticles, particle_buffer)
   dt = 0.005
   coords = zeros(Float64, 3)
@@ -260,6 +206,65 @@ function perform_time_step(b::Block, lostParticles, particle_buffer)
     end
   end
 end
+
+function time_step(rr::Vector{RemoteRef})
+    n = length(rr)
+    np = nprocs()
+    i = 2
+    nextidx() = (idx=i; i+=1; idx)
+    @sync begin
+        for iProc=1:np
+            if iProc != myid() || np == 1
+                @async begin
+                    while true
+                        idx = nextidx()
+                        if idx > n
+                            break
+                        end
+                        plost = remotecall_fetch(iProc, perform_time_step,
+                                                 rr[iProc])
+                    end
+                end
+            end
+        end
+    end
+end
+
+function perform_time_step(rr)
+  blocks = fetch(rr)
+  println("len(blocks): ", length(blocks))
+  dt = 0.005
+  coords = zeros(Float64, 3)
+  pos = zeros(Float64, 3)
+  particle_buffer = Array(Particle, 100)
+  lost_particles = Particle[]
+  for b in blocks
+    for cell in b.cells
+      nParticles = length(cell.particles)
+      if nParticles > 0
+        if nParticles > length(particle_buffer)
+          particle_buffer = Array(Particle, nParticles)
+        end
+        for i = 1:nParticles
+          particle_buffer[i] = cell.particles[i]
+        end
+        for p in particle_buffer[1:nParticles]
+          if p.cellID == cell.ID
+            move!(p, dt)
+          end
+          wasAssigned = assign_particle!(b, p, coords)
+          if !wasAssigned
+            push!(lostParticles, p)
+          end
+        end
+        splice!(cell.particles, 1:nParticles)
+      end
+    end
+  end
+  @show(lost_particles)
+  return nothing
+end
+
 
 function assign_particles!(oct, particles, coords)
   for p in particles

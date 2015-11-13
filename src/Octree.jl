@@ -5,11 +5,40 @@ using RayTrace
 
 export initialize_domain,
        refine_domain,
+       distribute,
        cell_containing_point,
        block_containing_point,
        is_out_of_bounds,
        collect_blocks!,
        all_cells!
+
+function distribute(allBlocks::Vector{Block})
+  println(" - distributing blocks to processors")
+  if nworkers() == 1
+    rr = RemoteRef[RemoteRef(iProc) for iProc in workers()]
+  else
+    rr = RemoteRef[RemoteRef(iProc) for iProc in 1:(nworkers()+1)]
+  end
+
+  nBlocks = length(allBlocks)
+  N = fld(nBlocks, nworkers())
+  d = nBlocks % nworkers()
+
+  k = 1
+  for i=1:nworkers()
+    rBlocks = Array(Block, N)
+    for j=1:N
+      rBlocks[j] = allBlocks[(i-1)*N + j]
+    end
+    if k <= d
+      push!(rBlocks, allBlocks[end-d+k])
+      k += 1
+    end
+    put!(rr[workers()[i]], rBlocks)
+  end
+
+  return rr
+end
 
 function collect_blocks!(oct::Block, allBlocks)
   for child in oct.children

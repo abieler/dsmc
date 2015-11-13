@@ -46,6 +46,13 @@ oct = initialize_domain(mySettings)
 refine_domain(oct, allTriangles, mySettings)
 allBlocks = Block[]
 collect_blocks!(oct, allBlocks)
+@time rr = distribute(allBlocks)
+
+for rrr in rr
+  @show(rrr)
+end
+
+
 ################################################################################
 # main loop
 ################################################################################
@@ -61,10 +68,11 @@ for iteration = 1:mySettings.nIterations
     save_particles(oct, "../output/particles_" *string(iteration)* ".csv")
   end
   compute_macroscopic_params(oct)
-  @time time_step(oct, lostParticles, particle_buffer)
-  #time_step_parallel(allBlocks, lostParticles, particle_buffer)
-  assign_particles!(oct, lostParticles, myPoint)
+  #@time time_step(oct, lostParticles, particle_buffer)
+  @time time_step(rr)
+  #assign_particles!(oct, lostParticles, myPoint)
   lostParticles = Particle[]
+  readline(STDIN)
 end
 
 ################################################################################
