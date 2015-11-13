@@ -6,7 +6,8 @@ export UserSettings,
        Point3D,
        Particle,
        Triangle,
-       UniformSource,
+       MeshBody,
+       SphericalBody,
        _x,
        _y,
        _z
@@ -33,7 +34,6 @@ end
 # default user settings
 UserSettings() = UserSettings(200, "../input/sphere2.ply", 200.0, 200.0, 200.0,
                               5, 5, 5, 3, 1, 5000)
-
 
 type Triangle
   id::Int64
@@ -85,12 +85,26 @@ type Point3D
     z::Float64
 end
 
+type MeshBody
+  triangles::Vector{Triangle}
+  temperature::Float64
+  particleFlux::Vector{Float64}
+  particleMass::Vector{Float64}
+  particleWeight::Vector{Float64}
 
-immutable UniformSource
-  SourceRadius::Float64        #Exospheric Source
-  SourceMass::Float64
-  SourceDensity::Float64                   #INMS N2 data at 1430 km
-  SourceTemperature::Float64
 end
+
+type SphericalBody
+  radius::Float64
+  mass::Float64
+  density::Float64
+  temperature::Float64
+  nNewParticles::Vector{Int64}
+  particleMass::Vector{Int64}
+  particleWeight::Vector{Float64}
+end
+
+
+
 
 end

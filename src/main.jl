@@ -3,9 +3,9 @@ using Triangles
 using Gas
 using Types
 
-@everywhere include("Physical.jl")
-@everywhere include("io.jl")
-@everywhere include("user.jl")
+include("Physical.jl")
+include("io.jl")
+include("user.jl")
 
 lostParticles = Particle[]
 myPoint = zeros(Float64, 3)
@@ -15,6 +15,7 @@ particle_buffer = Array(Particle, 400)
 ################################################################################
 # initialize source, time step, particle, weight, number of rep particles???
 ################################################################################
+#=
 bodyradius = TitanRadius+1430.0*km
 bodymass = TitanMass
 density = 4.48e13
@@ -25,23 +26,26 @@ println(" - SourceTemperature: ", Source.SourceTemperature)
 println(" - TimeStep: ", DELTA)
 w_factor = constant_weight(DELTA,Source,28.0*amu)
 println(w_factor)
+=#
 
 ################################################################################
 # load shape model
 ################################################################################
 nTriangles, allTriangles, surfaceArea = load_ply_file(mySettings.meshFileName)
-
+flux = mySettings.nNewParticlesPerIteration / surfaceArea
+body = MeshBody(allTriangles, 300.0, Float64[flux], Float64[18.0*amu],
+                Float64[1.e5] )
 ################################################################################
 # initialize simulation domain
 ################################################################################
 oct = initialize_domain(mySettings)
-split_block(oct)
 
 ################################################################################
 # refine domain and compute volume of cut cells
 ################################################################################
 refine_domain(oct, allTriangles, mySettings)
-
+allBlocks = Block[]
+collect_blocks!(oct, allBlocks)
 ################################################################################
 # main loop
 ################################################################################
@@ -51,14 +55,14 @@ const f = nParticles / surfaceArea
 for iteration = 1:mySettings.nIterations
   println("iteration: ", iteration)
   if iteration >= 1
-    #insert_new_particles(oct, nParticles, myPoint, Source, DELTA)
-    insert_new_particles(oct, allTriangles, f, myPoint, Source)
+    insert_new_particles(oct, body, myPoint)
   end
   if iteration % 20 == 1
     save_particles(oct, "../output/particles_" *string(iteration)* ".csv")
   end
   compute_macroscopic_params(oct)
-  time_step(oct, lostParticles, particle_buffer)
+  @time time_step(oct, lostParticles, particle_buffer)
+  #time_step_parallel(allBlocks, lostParticles, particle_buffer)
   assign_particles!(oct, lostParticles, myPoint)
   lostParticles = Particle[]
 end

@@ -8,10 +8,18 @@ export initialize_domain,
        cell_containing_point,
        block_containing_point,
        is_out_of_bounds,
-       all_cells!,
-       split_block,
-       insert_cells
+       collect_blocks!,
+       all_cells!
 
+function collect_blocks!(oct::Block, allBlocks)
+  for child in oct.children
+    if child.isLeaf
+      push!(allBlocks, child)
+    else
+      collect_blocks!(child, allBlocks)
+    end
+  end
+end
 
 function initialize_domain(mySettings)
   origin = zeros(Float64, 3)
@@ -26,7 +34,7 @@ function initialize_domain(mySettings)
               nCellsX, nCellsY, nCellsZ)
 
   #split octree into 8 children
-  #split_block(oct)
+  split_block(oct)
   return oct
 end
 

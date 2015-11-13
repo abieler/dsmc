@@ -9,8 +9,8 @@ global const TitanRadius = 2576.0*km
 global const TitanMass = 1.345e23
 global const PlutoRadius = 1186.0*km
 global const PlutoMass = 1.305e23
-#const Kep10bRadius
-#const Kep10bMass
+global const CharonRadius = 635.0*km
+global const CharonMass = 1.90e21
 global const EnceladusRadius = 252.1*km
 global const EnceladusMass =1.08e20
 global const MarsRadius = 3389.5*km
