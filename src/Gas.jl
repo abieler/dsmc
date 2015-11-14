@@ -12,7 +12,8 @@ export move!,
        compute_macroscopic_params,
        time_step,
        perform_time_step,
-       constant_weight
+       constant_weight,
+       pstep
 
 
 function insert_new_particles(oct::Block, body::MeshBody, coords)
@@ -112,32 +113,8 @@ function gas_surface_collisions!(block)
    end
 end
 
-function insert_new_particles_body(oct, allTriangles, f, coords, S)
-  particleMass = 18.0 * amu
-  w_factor = 1.0
-  cellID = 0
-  for tri in allTriangles
-    N = round(Int, tri.area * f)
-    newParticles = Array(Particle, N)
-    for i=1:N
-      pick_point!(tri, coords)
-      x = coords[1]
-      y = coords[2]
-      z = coords[3]
- 	    vx, vy, vz = maxwell_boltzmann_flux_v(S.SourceTemperature, particleMass)
-      vx, vy, vz = rotate_vec_to_pos(vx, vy, vz, x, y, z)
-      newParticles[i] = Particle(cellID, x, y, z, vx, vy, vz, particleMass, w_factor)
-    end
-    assign_particles!(oct, newParticles, coords)
-  end
-end
-
-
-# ############O.J.10-13-15###############################################
-# #Maxwwell Boltzmann flux velocity
-# ############################
- function maxwell_boltzmann_flux_v(temperature,mass)
-  velmax = 5000.0
+function maxwell_boltzmann_flux_v(temperature,mass)
+  velmax = 3000.0
   beta::Float64 = mass / 2.0 / k_boltz / temperature
   prb::Float64 = 0.0
   r = 1.0
@@ -153,24 +130,24 @@ end
    theta = 2.0 * pi * rand()
    #polar angle determined from cosine distribution
    phi = asin(sqrt(rand()))
-   vx = vel*cos(theta)*sin(phi)
-   vy = vel*sin(theta)*sin(phi)
-   vz = vel*cos(phi)
+   vx = vel * cos(theta) * sin(phi)
+   vy = vel * sin(theta) * sin(phi)
+   vz = vel * cos(phi)
 #   #Need to rotate vector to particle position
-   return vx,vy,vz
- end
+   return vx, vy, vz
+end
 
 function rotate_vec_to_pos(vecx,vecy,vecz,posx,posy,posz)
-	r = sqrt(posx*posx+posy*posy+posz*posz)
-	cosphi = posz/r
-	sinphi = sqrt(posx*posx+posy*posy)/r
-	costheta = posx/sinphi/r
-	sintheta = posy/sinphi/r
+  r = sqrt(posx * posx + posy * posy + posz * posz)
+  cosphi = posz / r
+  sinphi = sqrt(posx * posx + posy * posy) / r
+  costheta = posx / sinphi / r
+  sintheta = posy / sinphi / r
 
-	rotated_vectorx = vecx*costheta*cosphi-vecy*sintheta+vecz*costheta*sinphi
-	rotated_vectory = vecx*sintheta*cosphi+vecy*costheta+vecz*sintheta*sinphi
-	rotated_vectorz = -vecx*sinphi+vecz*cosphi
-    return rotated_vectorx, rotated_vectory, rotated_vectorz
+  rotated_vectorx = vecx * costheta * cosphi - vecy * sintheta + vecz * costheta * sinphi
+  rotated_vectory = vecx * sintheta * cosphi + vecy*costheta + vecz * sintheta * sinphi
+  rotated_vectorz = -vecx * sinphi + vecz * cosphi
+  return rotated_vectorx, rotated_vectory, rotated_vectorz
 end
 
 function compute_macroscopic_params(oct)
@@ -203,61 +180,6 @@ function time_step(oct::Block, lostParticles, particle_buffer)
   end
 end
 
-function time_step_parallel(allBlocks, lostParticles, particle_buffer)
-    n = length(allBlocks)
-    np = nprocs()
-    i = 1
-    nextidx() = (idx=i; i+=1; idx)
-    @sync begin
-        for p=1:np
-            if p != myid() || np == 1
-                @async begin
-                    while true
-                        idx = nextidx()
-                        if idx > n
-                            break
-                        end
-                        plost = remotecall_fetch(p, perform_time_step_parallel,
-                                                 allBlocks[idx], lostParticles,
-                                                 particle_buffer)
-                        for jj =1:length(plost)
-                          push!(lostParticles, plost[jj])
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
-
-function perform_time_step_parallel(b::Block, lostParticles, particle_buffer)
-  dt = 0.005
-  coords = zeros(Float64, 3)
-  pos = zeros(Float64, 3)
-  for cell in b.cells
-    nParticles = length(cell.particles)
-    if nParticles > 0
-      if nParticles > length(particle_buffer)
-        particle_buffer = Array(Particle, nParticles)
-      end
-      for i = 1:nParticles
-        particle_buffer[i] = cell.particles[i]
-      end
-      for p in particle_buffer[1:nParticles]
-        if p.cellID == cell.ID
-          move!(p, dt)
-        end
-        wasAssigned = assign_particle!(b, p, coords)
-        if !wasAssigned
-          push!(lostParticles, p)
-        end
-      end
-      splice!(cell.particles, 1:nParticles)
-    end
-  end
-  return lostParticles
-end
-
 function perform_time_step(b::Block, lostParticles, particle_buffer)
   dt = 0.005
   coords = zeros(Float64, 3)
@@ -285,6 +207,65 @@ function perform_time_step(b::Block, lostParticles, particle_buffer)
   end
 end
 
+function time_step(rr::Vector{RemoteRef})
+    n = length(rr)
+    np = nprocs()
+    i = 2
+    nextidx() = (idx=i; i+=1; idx)
+    @sync begin
+        for iProc=1:np
+            if iProc != myid() || np == 1
+                @async begin
+                    while true
+                        idx = nextidx()
+                        if idx > n
+                            break
+                        end
+                        plost = remotecall_fetch(iProc, perform_time_step,
+                                                 rr[iProc])
+                    end
+                end
+            end
+        end
+    end
+end
+
+function perform_time_step(rr)
+  blocks = fetch(rr)
+  println("len(blocks): ", length(blocks))
+  dt = 0.005
+  coords = zeros(Float64, 3)
+  pos = zeros(Float64, 3)
+  particle_buffer = Array(Particle, 100)
+  lost_particles = Particle[]
+  for b in blocks
+    for cell in b.cells
+      nParticles = length(cell.particles)
+      if nParticles > 0
+        if nParticles > length(particle_buffer)
+          particle_buffer = Array(Particle, nParticles)
+        end
+        for i = 1:nParticles
+          particle_buffer[i] = cell.particles[i]
+        end
+        for p in particle_buffer[1:nParticles]
+          if p.cellID == cell.ID
+            move!(p, dt)
+          end
+          wasAssigned = assign_particle!(b, p, coords)
+          if !wasAssigned
+            push!(lostParticles, p)
+          end
+        end
+        splice!(cell.particles, 1:nParticles)
+      end
+    end
+  end
+  @show(lost_particles)
+  return nothing
+end
+
+
 function assign_particles!(oct, particles, coords)
   for p in particles
     coords[1] = p.x
@@ -297,6 +278,7 @@ function assign_particles!(oct, particles, coords)
         push!(cell.particles, p)
       end
     end
+
   end
   return 0
 end
@@ -315,11 +297,11 @@ function assign_particle!(oct, p, coords)
     end
 end
 
-function constant_weight(dt,S::SphericalBody,mass)
+function constant_weight(dt, S, mass)
   nParticles = 50
-  vth = sqrt(8.0*k_boltz*S.SourceTemperature/pi/mass)
-  Flux = pi*S.SourceRadius^2*S.SourceDensity*vth
-  return Flux*dt/nParticles
+  vth = sqrt(8.0 * k_boltz * S.SourceTemperature/pi/mass)
+  Flux = pi * S.SourceRadius^2 * S.SourceDensity*vth
+  return Flux * dt / nParticles
 end
 
 function time_step(temperature,mass)

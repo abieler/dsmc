@@ -5,6 +5,7 @@ using RayTrace
 
 export initialize_domain,
        refine_domain,
+       distribute,
        cell_containing_point,
        block_containing_point,
        is_out_of_bounds,
@@ -12,21 +13,31 @@ export initialize_domain,
        all_cells!,
        distribute
 
-
-function distribute(blocks::Vector{Block})
-  nBlocks = length(blocks)
-  nWorkers = length(workers())
-  nBlocksPerWorker = Int(nBlocks/nWorkers)
-  rr = [RemoteRef(iProc) for iProc in workers()]
-  i = 1
-  for iProc in workers()
-    procBlocks = Block[]
-    for k=1:nBlocksPerWorker
-      push!(procBlocks, blocks[i])
-      i += 1
-    end
-    put!(rr[iProc-1], procBlocks)
+function distribute(allBlocks::Vector{Block})
+  println(" - distributing blocks to processors")
+  if nworkers() == 1
+    rr = RemoteRef[RemoteRef(iProc) for iProc in workers()]
+  else
+    rr = RemoteRef[RemoteRef(iProc) for iProc in 1:(nworkers()+1)]
   end
+
+  nBlocks = length(allBlocks)
+  N = fld(nBlocks, nworkers())
+  d = nBlocks % nworkers()
+
+  k = 1
+  for i=1:nworkers()
+    rBlocks = Array(Block, N)
+    for j=1:N
+      rBlocks[j] = allBlocks[(i-1)*N + j]
+    end
+    if k <= d
+      push!(rBlocks, allBlocks[end-d+k])
+      k += 1
+    end
+    put!(rr[workers()[i]], rBlocks)
+  end
+
   return rr
 end
 
@@ -52,6 +63,7 @@ function initialize_domain(mySettings)
   oct = Block(origin, halfSize, isLeaf, Array(Block,8), Cell[], refLevel,
               nCellsX, nCellsY, nCellsZ)
 
+  #split octree into 8 children
   split_block(oct)
   return oct
 end
@@ -113,6 +125,7 @@ function pick_pos_in_flow_filed(cell, pStart, pStop, vStartStop)
   end
   return false
 end
+
 
 function cut_cell_volume!(oct, pStart, N)
   pRandom = zeros(Float64, 3)
@@ -320,7 +333,7 @@ function block_containing_point(block::Block, point::Array{Float64,1})
       return false, block
     end
   end
-
+  
 end
 
 function cell_containing_point(oct::Block, point::Array{Float64, 1})
