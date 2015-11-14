@@ -46,6 +46,7 @@ oct = initialize_domain(mySettings)
 refine_domain(oct, allTriangles, mySettings)
 allBlocks = Block[]
 collect_blocks!(oct, allBlocks)
+distribute(allBlocks)
 ################################################################################
 # main loop
 ################################################################################

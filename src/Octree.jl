@@ -9,7 +9,26 @@ export initialize_domain,
        block_containing_point,
        is_out_of_bounds,
        collect_blocks!,
-       all_cells!
+       all_cells!,
+       distribute
+
+
+function distribute(blocks::Vector{Block})
+  nBlocks = length(blocks)
+  nWorkers = length(workers())
+  nBlocksPerWorker = Int(nBlocks/nWorkers)
+  rr = [RemoteRef(iProc) for iProc in workers()]
+  i = 1
+  for iProc in workers()
+    procBlocks = Block[]
+    for k=1:nBlocksPerWorker
+      push!(procBlocks, blocks[i])
+      i += 1
+    end
+    put!(rr[iProc-1], procBlocks)
+  end
+  return rr
+end
 
 function collect_blocks!(oct::Block, allBlocks)
   for child in oct.children
@@ -33,7 +52,6 @@ function initialize_domain(mySettings)
   oct = Block(origin, halfSize, isLeaf, Array(Block,8), Cell[], refLevel,
               nCellsX, nCellsY, nCellsZ)
 
-  #split octree into 8 children
   split_block(oct)
   return oct
 end
@@ -302,7 +320,7 @@ function block_containing_point(block::Block, point::Array{Float64,1})
       return false, block
     end
   end
-  
+
 end
 
 function cell_containing_point(oct::Block, point::Array{Float64, 1})
