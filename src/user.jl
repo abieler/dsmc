@@ -16,4 +16,4 @@ mySettings.nCellsPerBlockZ = 5
 
 mySettings.nMaxRefinementLevel = 5
 mySettings.nMaxTrianglesPerCell = 1
-mySettings.nNewParticlesPerIteration = 100000
+mySettings.nNewParticlesPerIteration = 1000

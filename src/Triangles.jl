@@ -1,6 +1,6 @@
 module Triangles
 using Types
-using Octree
+include("octree.jl")
 
 export build_triangles,
        calculate_surface_normals,

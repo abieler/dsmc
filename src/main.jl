@@ -1,16 +1,18 @@
-using Octree
 using Triangles
-using Gas
 using Types
+@everywhere include("gas.jl")
+@everywhere include("octree.jl")
+@everywhere include("Physical.jl")
+@everywhere include("io.jl")
+@everywhere include("user.jl")
 
-include("Physical.jl")
-include("io.jl")
-include("user.jl")
+@everywhere const global MyID = myid()
 
-lostParticles = Particle[]
-myPoint = zeros(Float64, 3)
+@everywhere lostParticles = Particle[]
+@everywhere lostIDs = Int64[]
+@everywhere myPoint = zeros(Float64, 3)
 
-particle_buffer = Array(Particle, 400)
+@everywhere particle_buffer = Array(Particle, 400)
 
 ################################################################################
 # initialize source, time step, particle, weight, number of rep particles???
@@ -31,51 +33,46 @@ println(w_factor)
 ################################################################################
 # load shape model
 ################################################################################
-nTriangles, allTriangles, surfaceArea = load_ply_file(mySettings.meshFileName)
-flux = mySettings.nNewParticlesPerIteration / surfaceArea
-body = MeshBody(allTriangles, 300.0, Float64[flux], Float64[18.0*amu],
+@everywhere nTriangles, allTriangles, surfaceArea = load_ply_file(mySettings.meshFileName)
+@everywhere flux = mySettings.nNewParticlesPerIteration / surfaceArea
+@everywhere body = MeshBody(allTriangles, 300.0, Float64[flux], Float64[18.0*amu],
                 Float64[1.e5] )
 ################################################################################
 # initialize simulation domain
 ################################################################################
-oct = initialize_domain(mySettings)
+@everywhere oct = initialize_domain(mySettings)
 
 ################################################################################
 # refine domain and compute volume of cut cells
 ################################################################################
-refine_domain(oct, allTriangles, mySettings)
-allBlocks = Block[]
-collect_blocks!(oct, allBlocks)
-@time rr = distribute(allBlocks)
-
-for rrr in rr
-  @show(rrr)
-end
-
+@everywhere refine_domain(oct, allTriangles, mySettings)
+@everywhere allBlocks = Block[]
+@everywhere collect_blocks!(oct, allBlocks)
+#@everywhere blocks2proc!(allBlocks)
+#@everywhere rr = distribute(allBlocks)
 
 ################################################################################
 # main loop
 ################################################################################
-const nParticles = mySettings.nNewParticlesPerIteration
-const f = nParticles / surfaceArea
+@everywhere const nParticles = mySettings.nNewParticlesPerIteration
+@everywhere const f = nParticles / surfaceArea
 
 for iteration = 1:mySettings.nIterations
+  tic()
   println("iteration: ", iteration)
   if iteration >= 1
-    insert_new_particles(oct, body, myPoint)
+    @everywhere insert_new_particles(oct, body, myPoint)
   end
-  if iteration % 20 == 1
-    save_particles(oct, "../output/particles_" *string(iteration)* ".csv")
-  end
-  compute_macroscopic_params(oct)
-  #@time time_step(oct, lostParticles, particle_buffer)
-  @time time_step(rr)
-  #assign_particles!(oct, lostParticles, myPoint)
-  lostParticles = Particle[]
-  readline(STDIN)
+  @everywhere compute_macroscopic_params(oct)
+  @everywhere time_step(oct, lostParticles, particle_buffer)
+  @everywhere send_lost_particles(lostParticles, lostIDs)
+  toc()
 end
 
 ################################################################################
 # save results
 ################################################################################
-save2vtk(oct)
+remotecall_fetch(1, save2vtk, oct)
+for iProc in workers()
+  remotecall_fetch(iProc, save_particles, "../output/particles_" *string(iProc)* ".csv")
+end

@@ -57,6 +57,7 @@ end
 
 type Cell
     ID::Int64
+    procID::Int64
     origin::Vector{Float64}
     halfSize::Vector{Float64}
     nodes::Array{Float64,2}
@@ -77,6 +78,7 @@ type Block
     nx::Int64
     ny::Int64
     nz::Int64
+    procID::Int64
 end
 
 type Point3D

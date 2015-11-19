@@ -1,5 +1,5 @@
 using Triangles
-using Octree
+include("octree.jl")
 
 function load_ply_file(fileName::ASCIIString)
   if myid() == 1
@@ -151,7 +151,7 @@ function save2vtk(oct)
   write(oFile, "CELL_DATA " * string(nCells) * "\n")
   #write(oFile, "SCALARS density float\n")
   #write(oFile, "LOOKUP_TABLE default\n")
-  write(oFile, "FIELD scalarField 3\n")
+  write(oFile, "FIELD scalarField 4\n")
 
   write(oFile, "numberDensity 1 " * string(nCells) * " float\n")
   for i=1:nCells
@@ -167,17 +167,21 @@ function save2vtk(oct)
     write(oFile, string(length(allCells[i].particles)) * "\n")
   end
 
+  write(oFile, "procID 1 " * string(nCells) * " float\n")
+  for i=1:nCells
+    write(oFile, string(allCells[i].procID) * "\n")
+  end
   close(oFile)
 end
 
 
-function save_particles(oct, fileName)
-  println("saving particles to file")
-  oFile = open(fileName, "w")
-  write(oFile, "x,y,z,vx,vy,vz\n")
-  data2CSV(oct, oFile)
-  close(oFile)
-  println("done!")
+function save_particles(fileName)
+    println("saving particles to file")
+    oFile = open(fileName, "w")
+    write(oFile, "x,y,z,vx,vy,vz\n")
+    data2CSV(oct, oFile)
+    close(oFile)
+    println("done!")
 end
 
 function data2CSV(oct, oFile)

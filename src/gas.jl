@@ -1,19 +1,8 @@
-module Gas
 using Distributions
 using Types
 using Triangles
 include("octree.jl")
 include("Physical.jl")
-
-export move!,
-       insert_new_particles,
-       assign_particles!,
-       compute_macroscopic_params,
-       time_step,
-       perform_time_step,
-       constant_weight,
-       pstep
-
 
 function insert_new_particles(oct::Block, body::MeshBody, coords)
  cellID = 0
@@ -169,20 +158,43 @@ function compute_params(block)
   end
 end
 
+function send_lost_particles(lostParticles, lostIDs)
+  @sync begin
+    for iProc in unique(lostIDs)
+      @async begin
+        particles_to_send = Particle[]
+        for k = 1:length(lostIDs)
+          if lostIDs[k] == iProc
+            push!(particles_to_send, lostParticles[k])
+          end
+        end
+        remotecall_fetch(iProc, assign_particles_rem!, particles_to_send, MyID)
+      end
+    end
+  end
+  lostParticles = Particle[]
+  lostIDs = Int64[]
+end
+
+
 function time_step(oct::Block, lostParticles, particle_buffer)
   for block in oct.children
     if block.isLeaf == 1
-      perform_time_step(block, lostParticles, particle_buffer)
+      if block.procID == MyID
+        perform_time_step(block, lostParticles, particle_buffer, lostIDs)
+      end
     else
       time_step(block, lostParticles, particle_buffer)
     end
   end
+  nothing
 end
 
-function perform_time_step(b::Block, lostParticles, particle_buffer)
-  dt = 0.005
+function perform_time_step(b::Block, lostParticles, particle_buffer, lostIDs)
+  dt = get_time_step(b)
   coords = zeros(Float64, 3)
   pos = zeros(Float64, 3)
+
   for cell in b.cells
     nParticles = length(cell.particles)
     if nParticles > 0
@@ -195,73 +207,19 @@ function perform_time_step(b::Block, lostParticles, particle_buffer)
       for p in particle_buffer[1:nParticles]
         if p.cellID == cell.ID
           move!(p, dt)
+        else
+          p.cellID = cell.ID
         end
-        wasAssigned = assign_particle!(b, p, coords)
-        if !wasAssigned
+        wasAssigned, iProc = assign_particle!(p, coords)
+        if iProc != MyID
           push!(lostParticles, p)
+          push!(lostIDs, iProc)
         end
       end
       splice!(cell.particles, 1:nParticles)
     end
   end
-end
-
-function time_step(rr::Vector{RemoteRef})
-    n = length(rr)
-    np = nprocs()
-    i = 2
-    nextidx() = (idx=i; i+=1; idx)
-    @sync begin
-        for iProc=1:np
-            if iProc != myid() || np == 1
-                @async begin
-                    while true
-                        idx = nextidx()
-                        if idx > n
-                            break
-                        end
-                        plost = remotecall_fetch(iProc, perform_time_step,
-                                                 rr[iProc])
-                    end
-                end
-            end
-        end
-    end
-end
-
-function perform_time_step(rr)
-  blocks = fetch(rr)
-  println("len(blocks): ", length(blocks))
-  dt = 0.005
-  coords = zeros(Float64, 3)
-  pos = zeros(Float64, 3)
-  particle_buffer = Array(Particle, 100)
-  lost_particles = Particle[]
-  for b in blocks
-    for cell in b.cells
-      nParticles = length(cell.particles)
-      if nParticles > 0
-        if nParticles > length(particle_buffer)
-          particle_buffer = Array(Particle, nParticles)
-        end
-        for i = 1:nParticles
-          particle_buffer[i] = cell.particles[i]
-        end
-        for p in particle_buffer[1:nParticles]
-          if p.cellID == cell.ID
-            move!(p, dt)
-          end
-          wasAssigned = assign_particle!(b, p, coords)
-          if !wasAssigned
-            push!(lostParticles, p)
-          end
-        end
-        splice!(cell.particles, 1:nParticles)
-      end
-    end
-  end
-  @show(lost_particles)
-  return nothing
+  nothing
 end
 
 
@@ -271,28 +229,58 @@ function assign_particles!(oct, particles, coords)
     coords[2] = p.y
     coords[3] = p.z
     if !is_out_of_bounds(oct, coords)
-      foundCell, cell = cell_containing_point(oct, coords)
-      if foundCell
+      foundCell, cell, iProc = cell_containing_point(oct, coords)
+      if foundCell && (iProc == MyID)
+        p.cellID = cell.ID
+        push!(cell.particles, p)
+      end
+    end
+  end
+  nothing
+end
+
+function assign_particles_rem!(particles, senderID)
+  coords = zeros(Float64, 3)
+  for p in particles
+    coords[1] = p.x
+    coords[2] = p.y
+    coords[3] = p.z
+    if !is_out_of_bounds(oct, coords)
+      foundCell, cell, iProc = cell_containing_point(oct, coords)
+      if foundCell && iProc == MyID
         p.cellID = cell.ID
         push!(cell.particles, p)
       end
     end
 
   end
-  return 0
+  nothing
 end
 
-function assign_particle!(oct, p, coords)
+function assign_particle!(p, coords)
     coords[1] = p.x
     coords[2] = p.y
     coords[3] = p.z
-    foundCell, cell = cell_containing_point(oct, coords)
+    foundCell, cell, iProc = cell_containing_point(oct, coords)
+    if foundCell && (iProc == MyID)
+      push!(cell.particles, p)
+      return true, iProc
+    else
+      return false, iProc
+    end
+end
+
+function assign_particle!(block::Block, p, coords)
+    coords[1] = p.x
+    coords[2] = p.y
+    coords[3] = p.z
+    foundCell, cell, iProc = cell_containing_point(block, coords)
     if foundCell
       p.cellID = cell.ID
       push!(cell.particles, p)
-      return true
+      return true, iProc
     else
-      return false
+      return false, iProc
     end
 end
 
@@ -308,4 +296,6 @@ function time_step(temperature,mass)
   return sqrt(8.0*k_boltz*temperature/pi/mass)/500.0
 end
 
+function get_time_step(b::Block)
+  return 0.001
 end
