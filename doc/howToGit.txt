@@ -6,14 +6,14 @@ General use:
 
 * modifying the file fileName.jl and commiting changes:
   git add fileName.jl
-  git commit fileName.jl
+  git commit
   git push
 
 
 * creating a new branch:
   git checkout -b newBranchName
-  (then normally do the git add and commits to work in 
-  the new branch)
+  (then do the git add and commits to work in 
+  the new branch as usual)
 
 
 * push your new branch to remote:
