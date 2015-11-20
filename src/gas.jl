@@ -140,12 +140,15 @@ end
 
 function compute_macroscopic_params(oct)
   for block in oct.children
-    if block.isLeaf == 1
-      compute_params(block)
+    if (block.isLeaf == 1)
+      if block.procID == MyID
+        compute_params(block)
+      end
     else
       compute_macroscopic_params(block)
     end
   end
+
 end
 
 function compute_params(block)
@@ -247,12 +250,9 @@ function assign_particles_rem!(particles, senderID)
     coords[3] = p.z
     if !is_out_of_bounds(oct, coords)
       foundCell, cell, iProc = cell_containing_point(oct, coords)
-      if foundCell && iProc == MyID
-        p.cellID = cell.ID
-        push!(cell.particles, p)
-      end
+      p.cellID = cell.ID
+      push!(cell.particles, p)
     end
-
   end
   nothing
 end
@@ -297,5 +297,5 @@ function time_step(temperature,mass)
 end
 
 function get_time_step(b::Block)
-  return 0.001
+  return 0.0001
 end
