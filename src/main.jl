@@ -48,25 +48,23 @@ println(w_factor)
 @everywhere refine_domain(oct, allTriangles, mySettings)
 @everywhere allBlocks = Block[]
 @everywhere collect_blocks!(oct, allBlocks)
-#@everywhere blocks2proc!(allBlocks)
-#@everywhere rr = distribute(allBlocks)
 
 ################################################################################
 # main loop
 ################################################################################
 @everywhere const nParticles = mySettings.nNewParticlesPerIteration
 @everywhere const f = nParticles / surfaceArea
-
-for iteration = 1:mySettings.nIterations
-  tic()
-  println("iteration: ", iteration)
-  if iteration >= 1
-    @everywhere insert_new_particles(oct, body, myPoint)
+@everywhere global iparams = 0
+@time begin
+  for iteration = 1:mySettings.nIterations
+    println("iteration: ", iteration)
+    if iteration >= 1
+      @everywhere insert_new_particles(oct, body, myPoint)
+    end
+      @everywhere compute_macroscopic_params(oct)
+      @everywhere time_step(oct, lostParticles, particle_buffer)
+      @everywhere send_lost_particles(lostParticles, lostIDs)
   end
-  @everywhere compute_macroscopic_params(oct)
-  @everywhere time_step(oct, lostParticles, particle_buffer)
-  @everywhere send_lost_particles(lostParticles, lostIDs)
-  toc()
 end
 
 ################################################################################
