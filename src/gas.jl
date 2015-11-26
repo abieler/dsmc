@@ -82,9 +82,9 @@ function move_RK2!(p::Particle, dt, S)
 end
 
 function move!(p::Particle, dt)
-  p.x = p.x + dt * p.vx
-  p.y = p.y + dt * p.vy
-  p.z = p.z + dt * p.vz
+    p.x = p.x + dt * p.vx
+    p.y = p.y + dt * p.vy
+    p.z = p.z + dt * p.vz
 end
 
 function next_pos!(p::Particle, dt, pos)
@@ -161,6 +161,34 @@ function compute_params(block)
   end
 end
 
+function decompose_particles(particles)
+  nParticles = length(particles)
+  p_arr = zeros(Float64, 9, nParticles)
+  for i=1:nParticles
+    @inbounds p_arr[1,i] = particles[i].x
+    @inbounds p_arr[2,i] = particles[i].y
+    @inbounds p_arr[3,i] = particles[i].z
+    @inbounds p_arr[4,i] = particles[i].vx
+    @inbounds p_arr[5,i] = particles[i].vy
+    @inbounds p_arr[6,i] = particles[i].vz
+    @inbounds p_arr[7,i] = particles[i].cellID
+    @inbounds p_arr[8,i] = particles[i].mass
+    @inbounds p_arr[9,i] = particles[i].weight
+  end
+  return p_arr
+end
+
+function rebuild_particles(p_arr)
+  nParticles = size(p_arr, 2)
+  particles = Array(Particle, nParticles)
+  for i=1:nParticles
+    @inbounds particles[i] = Particle(Int(p_arr[7,i]), p_arr[1,i], p_arr[2,i], p_arr[3,i],
+                            p_arr[4,i], p_arr[5,i], p_arr[6,i], p_arr[8,i],
+                            p_arr[9,i])
+  end
+  return particles
+end
+
 function send_lost_particles(lostParticles, lostIDs)
   @sync begin
     for iProc in unique(lostIDs)
@@ -171,7 +199,8 @@ function send_lost_particles(lostParticles, lostIDs)
             push!(particles_to_send, lostParticles[k])
           end
         end
-        remotecall_fetch(iProc, assign_particles_rem!, particles_to_send, MyID)
+        p_arr = decompose_particles(particles_to_send)
+        remotecall_fetch(iProc, assign_particles_rem!, p_arr, MyID)
       end
     end
   end
@@ -242,8 +271,9 @@ function assign_particles!(oct, particles, coords)
   nothing
 end
 
-function assign_particles_rem!(particles, senderID)
+function assign_particles_rem!(p_arr, senderID)
   coords = zeros(Float64, 3)
+  particles = rebuild_particles(p_arr)
   for p in particles
     coords[1] = p.x
     coords[2] = p.y

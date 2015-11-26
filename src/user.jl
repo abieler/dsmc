@@ -3,7 +3,7 @@ using Types
 mySettings = UserSettings()
 body = MeshBody
 
-mySettings.nIterations = 600
+mySettings.nIterations = 50
 mySettings.meshFileName = "../input/sphere2.ply"
 
 mySettings.domainSizeX = 5000.0
@@ -16,4 +16,4 @@ mySettings.nCellsPerBlockZ = 5
 
 mySettings.nMaxRefinementLevel = 5
 mySettings.nMaxTrianglesPerCell = 1
-mySettings.nNewParticlesPerIteration = 100000
+mySettings.nNewParticlesPerIteration = 90000

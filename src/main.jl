@@ -55,15 +55,16 @@ println(w_factor)
 @everywhere const nParticles = mySettings.nNewParticlesPerIteration
 @everywhere const f = nParticles / surfaceArea
 @everywhere global iparams = 0
-for iteration = 1:mySettings.nIterations
-  println("iteration: ", iteration)
-  if iteration >= 1
-    @everywhere insert_new_particles(oct, body, myPoint)
+@time begin
+  for iteration = 1:mySettings.nIterations
+    println("iteration: ", iteration)
+    if iteration >= 1
+      @everywhere insert_new_particles(oct, body, myPoint)
+    end
+      @everywhere compute_macroscopic_params(oct)
+      @everywhere time_step(oct, lostParticles, particle_buffer)
+      @everywhere send_lost_particles(lostParticles, lostIDs)
   end
-  @everywhere compute_macroscopic_params(oct)
-  @everywhere time_step(oct, lostParticles, particle_buffer)
-  @everywhere @time send_lost_particles(lostParticles, lostIDs)
-  readline(STDIN)
 end
 
 ################################################################################
