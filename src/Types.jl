@@ -5,6 +5,7 @@ export UserSettings,
        Block,
        Point3D,
        Particle,
+       Particles,
        Triangle,
        MeshBody,
        SphericalBody,
@@ -55,6 +56,30 @@ type Particle
   weight::Float64
 end
 
+type Particles
+    nParticles::Int64
+    procID::Vector{Int64}
+    x::Vector{Float64}
+    y::Vector{Float64}
+    z::Vector{Float64}
+    vx::Vector{Float64}
+    vy::Vector{Float64}
+    vz::Vector{Float64}
+    mass::Vector{Float64}
+    weight::Vector{Float64}
+end
+
+NN = 100
+Particles() = Particles(0, zeros(Int64, NN), zeros(Float64, NN), zeros(Float64, NN),
+                        zeros(Float64, NN), zeros(Float64, NN), zeros(Float64, NN),
+                        zeros(Float64, NN), zeros(Float64, NN), zeros(Float64, NN)
+                        )
+Particles(N::Int) = Particles(0, zeros(Int64, N), zeros(Float64, N), zeros(Float64, N),
+                        zeros(Float64, N), zeros(Float64, N), zeros(Float64, N),
+                        zeros(Float64, N), zeros(Float64, N), zeros(Float64, N)
+                        )
+
+
 type Cell
     ID::Int64
     procID::Int64
@@ -65,7 +90,8 @@ type Cell
     data::Vector{Float64}
     triangles::Vector{Triangle}
     hasTriangles::Bool
-    particles::Vector{Particle}
+    #particles::Vector{Particle}
+    particles::Particles
 end
 
 type Block
@@ -90,6 +116,7 @@ end
 type MeshBody
   triangles::Vector{Triangle}
   temperature::Float64
+  mass::Float64
   particleFlux::Vector{Float64}
   particleMass::Vector{Float64}
   particleWeight::Vector{Float64}

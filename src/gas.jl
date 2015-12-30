@@ -5,24 +5,23 @@ include("octree.jl")
 include("Physical.jl")
 
 function insert_new_particles(oct::Block, body::MeshBody, coords)
- cellID = 0
+ procID = 0
  nSpecies = length(body.particleMass)
  for tri in body.triangles
    for iSpecies in nSpecies
      N = round(Int, tri.area * body.particleFlux[iSpecies])
-     newParticles = Array(Particle, N)
      particleMass = body.particleMass[iSpecies]
      w = body.particleWeight[iSpecies]
      for i=1:N
-       pick_point!(tri, coords)
-       x = coords[1]
-       y = coords[2]
-       z = coords[3]
+        pick_point!(tri, coords)
+        x = coords[1]
+        y = coords[2]
+        z = coords[3]
   	    vx, vy, vz = maxwell_boltzmann_flux_v(body.temperature, particleMass)
-       vx, vy, vz = rotate_vec_to_pos(vx, vy, vz, x, y, z)
-       newParticles[i] = Particle(cellID, x, y, z, vx, vy, vz, particleMass, w)
+        vx, vy, vz = rotate_vec_to_pos(vx, vy, vz, x, y, z)
+        #newParticles[i] = Particle(cellID, x, y, z, vx, vy, vz, particleMass, w)
+        assign_particle!(oct, procID, x, y, z, vx, vy, vz, particleMass, w, coords)
      end
-     assign_particles!(oct, newParticles, coords)
    end
  end
 end
@@ -48,29 +47,34 @@ function insert_new_particles(oct::Block, body::SphericalBody, coords)
 
   assign_particles!(oct, newParticles, coords)
 end
-function accelerate!(pos, p::Particle, accl, S)
+function accelerate!(pos, p::Particle, accl, body)
   r = sqrt(pos[1]^2 +pos[2]^2 + pos[3]^2)
-  accl[1] = G * S.SourceMass * p.mass * pos[1] / r^3.0
-  accl[2] = G * S.SourceMass * p.mass * pos[2] / r^3.0
-  accl[3] = G * S.SourceMass * p.mass * pos[3] / r^3.0
+  accl[1] = G * body.mass * p.mass * pos[1] / r^3.0
+  accl[2] = G * body.nass * p.mass * pos[2] / r^3.0
+  accl[3] = G * body.mass * p.mass * pos[3] / r^3.0
 end
 
-function move_RK2!(p::Particle, dt, S)
+function move_RK2!(p::Particle, dt, body)
+  pos = zeros(Float64, 3)
+  accl = zeros(Float64, 3)
+  rkPos = zeros(Float64, 3)
+  rkVel = zeros(Float64, 3)
+
   pos[1] = p.x
   pos[2] = p.y
   pos[3] = p.z
 
-  acclerate! = (pos, p, a, S)
+  acclerate! = (pos, p, accl, body)
 
   rkPos[1] = p.x + p.vx * dt / 2.0
   rkPos[2] = p.y + p.vy * dt / 2.0
   rkPos[3] = p.z + p.vz * dt / 2.0
 
-  rkVel[1] = p.vx + a[1] * dt / 2.0
-  rkVel[2] = p.vy + a[2] * dt / 2.0
-  rkVel[3] = p.vz + a[3] * dt / 2.0
+  rkVel[1] = p.vx + accl[1] * dt / 2.0
+  rkVel[2] = p.vy + accl[2] * dt / 2.0
+  rkVel[3] = p.vz + accl[3] * dt / 2.0
 
-  acclerate! = (rkPos, p, a, S)
+  acclerate! = (rkPos, p, accl, body)
 
   p.x = p.x + rkVel[1] * dt
   p.y = p.y + rkVel[2] * dt
@@ -85,6 +89,14 @@ function move!(p::Particle, dt)
     p.x = p.x + dt * p.vx
     p.y = p.y + dt * p.vy
     p.z = p.z + dt * p.vz
+end
+
+function move!(p::Particles, dt)
+    for i=1:p.nParticles
+        @inbounds p.x[i] = p.x[i] + dt * p.vx[i]
+        @inbounds p.y[i] = p.y[i] + dt * p.vy[i]
+        @inbounds p.z[i] = p.z[i] + dt * p.vz[i]
+    end
 end
 
 function next_pos!(p::Particle, dt, pos)
@@ -153,12 +165,29 @@ end
 
 function compute_params(block)
   for cell in block.cells
-    density = length(cell.particles)/cell.volume
+    density = length(cell.particles.nParticles)/cell.volume
     if isnan(density)
       density = 0.0
     end
     cell.data[1] = density
   end
+end
+
+function decompose_particles(p::Particles)
+  nParticles = p.nParticles
+  p_arr = zeros(Float64, 9, nParticles)
+  for i=1:nParticles
+    @inbounds p_arr[1,i] = p.x[i]
+    @inbounds p_arr[2,i] = p.y[i]
+    @inbounds p_arr[3,i] = p.z[i]
+    @inbounds p_arr[4,i] = p.vx[i]
+    @inbounds p_arr[5,i] = p.vy[i]
+    @inbounds p_arr[6,i] = p.vz[i]
+    @inbounds p_arr[7,i] = p.procID[i]
+    @inbounds p_arr[8,i] = p.mass[i]
+    @inbounds p_arr[9,i] = p.weight[i]
+  end
+  return p_arr
 end
 
 function decompose_particles(particles)
@@ -180,13 +209,55 @@ end
 
 function rebuild_particles(p_arr)
   nParticles = size(p_arr, 2)
-  particles = Array(Particle, nParticles)
+  p = Particles(nParticles)
   for i=1:nParticles
-    @inbounds particles[i] = Particle(Int(p_arr[7,i]), p_arr[1,i], p_arr[2,i], p_arr[3,i],
-                            p_arr[4,i], p_arr[5,i], p_arr[6,i], p_arr[8,i],
-                            p_arr[9,i])
+    @inbounds p.x[i] = p_arr[1,i]
+    @inbounds p.y[i] = p_arr[2,i]
+    @inbounds p.z[i] = p_arr[3,i]
+    @inbounds p.vx[i] = p_arr[4,i]
+    @inbounds p.vy[i] = p_arr[5,i]
+    @inbounds p.vz[i] = p_arr[6,i]
+    @inbounds p.procID[i] = p_arr[7,i]
+    @inbounds p.mass[i] = p_arr[8,i]
+    @inbounds p.weight[i] = p_arr[9,i]
   end
-  return particles
+  p.nParticles = nParticles
+  return p
+end
+
+function send_particles_to_cpu(lostParticles)
+  @show(workers())
+  @show(MyID)
+  if (MyID in workers() & (lostParticles.nParticles > 0))
+    println("actually something to do")
+    lostIDs = lostParticles.procID
+    uniqueIDs = unique(lostIDs)
+    splice!(uniqueIDs, findfirst(uniqueIDs, 0))
+    @show(uniqueIDs)
+    @sync begin
+      for iProc in unique(lostIDs)
+        @async begin
+          particles_to_send = Particles(count(i->i==iProc, lostIDs))
+          for k = 1:length(lostIDs)
+            if lostIDs[k] == iProc
+              add!(lostParticles, particles_to_send, k)
+            end
+          end
+          p_arr = decompose_particles(particles_to_send)
+          remotecall_fetch(iProc, assign_particles_rem!, p_arr, MyID)
+          #remotecall_fetch(iProc, assign_particles_rem!, zeros((3,3)), MyID)
+          #remotecall_fetch(iProc, my_rem, MyID)
+        end
+      end
+    end
+  end
+  nothing
+end
+
+function do_send(lostParticles)
+
+function my_rem(senderID)
+  println("got msg from ", string(senderID))
 end
 
 function send_lost_particles(lostParticles, lostIDs)
@@ -196,94 +267,58 @@ function send_lost_particles(lostParticles, lostIDs)
         particles_to_send = Particle[]
         for k = 1:length(lostIDs)
           if lostIDs[k] == iProc
-            push!(particles_to_send, lostParticles[k])
+            add!(lostParticles, particles_to_send, k)
           end
         end
         p_arr = decompose_particles(particles_to_send)
         remotecall_fetch(iProc, assign_particles_rem!, p_arr, MyID)
+
       end
     end
   end
-  lostParticles = Particle[]
-  lostIDs = Int64[]
 end
 
 
-function time_step(oct::Block, lostParticles, particle_buffer)
+function time_step(oct::Block, lostParticles)
   for block in oct.children
     if block.isLeaf == 1
       if block.procID == MyID
-        perform_time_step(block, lostParticles, particle_buffer, lostIDs)
+        perform_time_step(block, lostParticles)
       end
     else
-      time_step(block, lostParticles, particle_buffer)
+      time_step(block, lostParticles)
     end
   end
   nothing
 end
 
-function perform_time_step(b::Block, lostParticles, particle_buffer, lostIDs)
+function perform_time_step(b::Block, lostParticles)
   dt = get_time_step(b)
   coords = zeros(Float64, 3)
   pos = zeros(Float64, 3)
 
   for cell in b.cells
-    nParticles = length(cell.particles)
-    if nParticles > 0
-      if nParticles > length(particle_buffer)
-        particle_buffer = Array(Particle, nParticles)
-      end
-      for i = 1:nParticles
-        particle_buffer[i] = cell.particles[i]
-      end
-      for p in particle_buffer[1:nParticles]
-        if p.cellID == cell.ID
-          move!(p, dt)
-        else
-          p.cellID = cell.ID
-        end
-        wasAssigned, iProc = assign_particle!(p, coords)
-        if iProc != MyID
-          push!(lostParticles, p)
-          push!(lostIDs, iProc)
-        end
-      end
-      splice!(cell.particles, 1:nParticles)
+    if cell.particles.nParticles > 0
+      move!(cell.particles, dt)
+      assign_particles!(oct, cell.particles, coords, lostParticles)
     end
   end
   nothing
 end
 
-
-function assign_particles!(oct, particles, coords)
-  for p in particles
-    coords[1] = p.x
-    coords[2] = p.y
-    coords[3] = p.z
-    if !is_out_of_bounds(oct, coords)
-      foundCell, cell, iProc = cell_containing_point(oct, coords)
-      if foundCell && (iProc == MyID)
-        p.cellID = cell.ID
-        push!(cell.particles, p)
-      end
-    end
-  end
-  nothing
-end
-
-function assign_particles_rem!(p_arr, senderID)
+function assign_particles_rem!(p_arr)
   coords = zeros(Float64, 3)
-  particles = rebuild_particles(p_arr)
-  for p in particles
-    coords[1] = p.x
-    coords[2] = p.y
-    coords[3] = p.z
-    if !is_out_of_bounds(oct, coords)
-      foundCell, cell, iProc = cell_containing_point(oct, coords)
-      p.cellID = cell.ID
-      push!(cell.particles, p)
-    end
+  println("got ", size(p_arr, 2), " particles.")
+  p = rebuild_particles(p_arr)
+  println("rebuilt")
+  for i in p.nParticles
+    coords[1] = p.x[i]
+    coords[2] = p.y[i]
+    coords[3] = p.z[i]
+    foundCell, cell, iProc = cell_containing_point(oct, coords)
+    add!(p, cell.particles, i)
   end
+  p = Particles(1)
   nothing
 end
 
@@ -300,13 +335,106 @@ function assign_particle!(p, coords)
     end
 end
 
+function remove!(p::Particles, i::Int64)
+  splice!(p.x, i)
+  splice!(p.y, i)
+  splice!(p.z, i)
+  splice!(p.vx, i)
+  splice!(p.vy, i)
+  splice!(p.vz, i)
+  splice!(p.procID, i)
+  splice!(p.mass, i)
+  splice!(p.weight, i)
+  p.nParticles -=1
+end
+
+function add!(from::Particles, to::Particles, i::Int64)
+  # p == particles from cell
+  # l == particles lost from current cell
+  n = to.nParticles + 1
+  nMax = length(to.x)
+  if n > nMax
+    allocate_particles!(to)
+  end
+  to.x[n] = from.x[i]
+  to.y[n] = from.y[i]
+  to.z[n] = from.z[i]
+  to.vx[n] = from.vx[i]
+  to.vy[n] = from.vy[i]
+  to.vz[n] = from.vz[i]
+  to.procID[n] = from.procID[i]
+  to.mass[n] = from.mass[i]
+  to.weight[n] = from.weight[n]
+  to.nParticles += 1
+end
+
+function assign_particles!(oct::Block, p::Particles, coords, lostParticles)
+  for i=1:p.nParticles
+    coords[1] = p.x[i]
+    coords[2] = p.y[i]
+    coords[3] = p.z[i]
+    if !is_out_of_bounds(oct, coords)
+      foundCell, cell, iProc = cell_containing_point(oct, coords)
+      p.procID[i] = iProc
+      if iProc != MyID
+        add!(p, lostParticles, i)
+        remove!(p, i)
+      end
+    else
+      remove!(p, i)
+    end
+  end
+end
+
+function allocate_particles!(p::Particles; N=25)
+  append!(p.procID, zeros(Int64, N))
+  append!(p.x, zeros(Float64, N))
+  append!(p.y, zeros(Float64, N))
+  append!(p.z, zeros(Float64, N))
+  append!(p.vx, zeros(Float64, N))
+  append!(p.vy, zeros(Float64, N))
+  append!(p.vz, zeros(Float64, N))
+  append!(p.mass, zeros(Float64, N))
+  append!(p.weight, zeros(Float64, N))
+  nothing
+end
+
+function assign_particle!(oct, procID, x, y, z, vx, vy, vz, particleMass, w, coords)
+  coords[1] = x
+  coords[2] = y
+  coords[3] = z
+  foundCell, cell, iProc = cell_containing_point(oct, coords)
+  if foundCell && (iProc == MyID)
+    maxParticles = length(cell.particles.x)
+    iParticle = cell.particles.nParticles + 1
+    cell.particles.nParticles += 1
+    if iParticle > maxParticles
+      allocate_particles!(cell.particles)
+    end
+    cell.particles.procID[iParticle] = MyID
+    cell.particles.x[iParticle] = x
+    cell.particles.y[iParticle] = y
+    cell.particles.z[iParticle] = z
+    cell.particles.vx[iParticle] = vx
+    cell.particles.vy[iParticle] = vy
+    cell.particles.vz[iParticle] = vz
+    cell.particles.mass[iParticle] = particleMass
+    cell.particles.weight[iParticle] = w
+    return true, iProc
+  else
+    return false, iProc
+  end
+end
+
+
+
 function assign_particle!(block::Block, p, coords)
     coords[1] = p.x
     coords[2] = p.y
     coords[3] = p.z
     foundCell, cell, iProc = cell_containing_point(block, coords)
-    if foundCell
-      p.cellID = cell.ID
+    if foundCell && (iProc == MyID)
+      p.cellID = cell.procID
       push!(cell.particles, p)
       return true, iProc
     else

@@ -2,33 +2,6 @@ using Triangles
 using Types
 using RayTrace
 
-function distribute(allBlocks::Vector{Block})
-  println(" - distributing blocks to processors")
-  if nworkers() == 1
-    rr = RemoteRef[RemoteRef(iProc) for iProc in workers()]
-  else
-    rr = RemoteRef[RemoteRef(iProc) for iProc in 1:(nworkers()+1)]
-  end
-
-  nBlocks = length(allBlocks)
-  N = fld(nBlocks, nworkers())
-  d = nBlocks % nworkers()
-
-  k = 1
-  for i=1:nworkers()
-    rBlocks = Array(Block, N)
-    for j=1:N
-      rBlocks[j] = allBlocks[(i-1)*N + j]
-    end
-    if k <= d
-      push!(rBlocks, allBlocks[end-d+k])
-      k += 1
-    end
-    put!(rr[workers()[i]], rBlocks)
-  end
-
-  return rr
-end
 
 function collect_blocks!(oct::Block, allBlocks)
   for child in oct.children
@@ -52,7 +25,6 @@ function initialize_domain(mySettings)
   oct = Block(origin, halfSize, isLeaf, Array(Block,8), Cell[], refLevel,
               nCellsX, nCellsY, nCellsZ, 0)
 
-  #split octree into 8 children
   split_block(oct)
   return oct
 end
@@ -89,24 +61,6 @@ function blocks2proc!(oct::Block, i)
     end
   end
 end
-
-
-function foobar()
-  res = zeros(Int64, 5)
-  res2 = zeros(Int64, 5)
-  for block in allBlocks
-    res[block.procID] += 1
-    for cell in block.cells
-      res2[cell.procID] += 1
-    end
-  end
-  @show(length(allBlocks))
-  @show(res)
-  @show(res2)
-  @show(sum(res))
-  nothing
-end
-
 
 function refine_domain(oct, allTriangles, mySettings)
   iMax = mySettings.nMaxRefinementLevel
@@ -271,7 +225,7 @@ function insert_cells(b::Block)
     for iy = 0:b.ny-1
       for ix = 0:b.nx-1
         cell = Cell(ID, procID, zeros(Float64,3), zeros(Float64,3), zeros(Float64,3,8),
-                    volume, zeros(Float64,8), Triangle[], false, Particle[])
+                    volume, zeros(Float64,8), Triangle[], false, Particles())
 
         cell.origin[1] = 0.5 * lx + ix * lx + b.origin[1] - b.halfSize[1]
         cell.origin[2] = 0.5 * ly + iy * ly + b.origin[2] - b.halfSize[2]

@@ -178,7 +178,7 @@ end
 function save_particles(fileName)
     println("saving particles to file")
     oFile = open(fileName, "w")
-    write(oFile, "x,y,z,vx,vy,vz\n")
+    write(oFile, "x,y,z,vx,vy,vz,cellID\n")
     data2CSV(oct, oFile)
     close(oFile)
     println("done!")
@@ -188,8 +188,23 @@ function data2CSV(oct, oFile)
   for child in oct.children
     if child.isLeaf
       for cell in child.cells
+        p = cell.particles
+        for i=1:p.nParticles
+          @printf oFile "%.3e,%3.e,%.3e,%.3e,%.3e,%.3e,%.3e\n" p.x[i] p.y[i] p.z[i] p.vx[i] p.vy[i] p.vz[i] p.procID[i]
+        end
+      end
+    else
+      data2CSV(child, oFile)
+    end
+  end
+end
+
+function data2CSV_bkp(oct, oFile)
+  for child in oct.children
+    if child.isLeaf
+      for cell in child.cells
           for p in cell.particles
-            @printf oFile "%.3e,%3.e,%.3e,%.3e,%.3e,%.3e\n" p.x p.y p.z p.vx p.vy p.vz
+            @printf oFile "%.3e,%3.e,%.3e,%.3e,%.3e,%.3e,%.3e\n" p.x p.y p.z p.vx p.vy p.vz p.cellID
           end
       end
     else
