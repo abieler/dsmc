@@ -226,14 +226,10 @@ function rebuild_particles(p_arr)
 end
 
 function send_particles_to_cpu(lostParticles)
-  @show(workers())
-  @show(MyID)
   if (MyID in workers() & (lostParticles.nParticles > 0))
-    println("actually something to do")
     lostIDs = lostParticles.procID
     uniqueIDs = unique(lostIDs)
     splice!(uniqueIDs, findfirst(uniqueIDs, 0))
-    @show(uniqueIDs)
     @sync begin
       for iProc in unique(lostIDs)
         @async begin
