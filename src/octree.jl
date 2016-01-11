@@ -97,7 +97,8 @@ function pick_pos_in_flow_filed(cell, pStart, pStop, vStartStop)
         pStop[i] = cell.nodes[i,k]
         vStartStop[i] = pStop[i] - pStart[i]
       end
-      counter = nTrianglesIntersects(cell.triangles, pStart, pStop, vStartStop)
+      counter = nTrianglesIntersects(cell.triangles, pStart, pStop, vStartStop,
+                                     pI, u, v, w)
       if (counter % 2) == 0
         return true
       end
@@ -142,7 +143,8 @@ function cut_cell_volume!(oct, pStart, N)
             pRandom[1] = x[i]
             pRandom[2] = y[i]
             pRandom[3] = z[i]
-            counter = nTrianglesIntersects(cell.triangles, pStart, pRandom, vRandom)
+            counter = nTrianglesIntersects(cell.triangles, pStart, pRandom,
+                                           vRandom, pI, u, v, w)
             if (counter % 2) == 1
               nInside += 1
             else
