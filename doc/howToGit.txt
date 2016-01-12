@@ -1,3 +1,11 @@
+First time setup:
+  git config --global user.name yourUserName
+  git config --global user.email yourEmail@foo.bar
+  
+  git config --global core.editor vim
+  (or)
+  git config --global core.editor emacs
+
 General use:
 
 * get the repository the first time:
