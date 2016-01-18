@@ -21,6 +21,17 @@ using Types
 @everywhere particle_buffer = Array(Particle, 400)
 @everywhere coords = zeros(Float64, 3)
 
+
+type SphericalBody
+  radius::Float64
+  mass::Float64
+  density::Float64
+  temperature::Float64
+  nNewParticles::Vector{Int64}
+  particleMass::Vector{Int64}
+  particleWeight::Vector{Float64}
+end
+@everywhere S = SphericalBody(128.0, 1e24, 3000.0, 250.0,[500],[18],[1e20])
 ################################################################################
 # load shape model
 ################################################################################
@@ -48,13 +59,19 @@ using Types
 @time begin
   for iteration = 1:mySettings.nIterations
     #@everywhere insert_new_particles(oct, body, myPoint)
-    if iteration < 250
+    if iteration < 2
+      #@everywhere insert_new_particles(oct, myPoint)
       @everywhere insert_new_particles(oct, myPoint)
     end
     @everywhere compute_macroscopic_params(oct)
     @everywhere time_step(oct, lostParticles, coords)
     @everywhere send_particles_to_cpu(lostParticles)
     @everywhere lostParticles.nParticles = 0
+    if iteration % 50 == 0
+      for iProc in workers()
+        remotecall_fetch(iProc, save_particles, "../output/particles_iProc_" *string(iProc) * "_" * string(iteration) * ".csv")
+      end
+    end
     @show(iteration)
   end
 end
@@ -63,6 +80,3 @@ end
 # save results
 ################################################################################
 @everywhere save2vtk(oct)
-for iProc in workers()
-  remotecall_fetch(iProc, save_particles, "../output/particles_" *string(iProc)* ".csv")
-end

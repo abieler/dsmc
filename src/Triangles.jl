@@ -24,18 +24,47 @@ function pick_point!(tri::Triangle, coords)
   end
 end
 
-function assign_triangles!(oct, allTriangles)
-  for tri in allTriangles
-      foundCell, cell = cell_containing_point(oct, tri.center)
-      if foundCell
-        push!(cell.triangles, tri)
-        cell.hasTriangles = true
+function tri2cell(tri, cell)
+  if !in(tri, cell.triangles)
+    push!(cell.triangles, tri)
+  end
+end
+
+function isTriangleInCell(tri, cell)
+  score = 0
+  for i=1:3
+    if cell.origin[i] - cell.halfSize[i] <= tri.center[i] <= cell.origin[i] + cell.halfSize[i]
+      score += 1
+    end
+    if score == 3
+      return true
+    end
+  end
+  for k=1:3
+    score = 0
+    for i=1:3
+      if cell.origin[i] - cell.halfSize[i] <= tri.nodes[i,k] <= cell.origin[i] + cell.halfSize[i]
+        score += 1
       end
+    end
+    if score == 3
+      return true
+    end
+  end
+  return false
+end
+
+function assign_triangles!(oct, allTriangles, allCells)
+  for cell in allCells
+    for tri in allTriangles
+      if isTriangleInCell(tri, cell)
+        push!(cell.triangles, tri)
+      end
+    end
   end
 end
 
 function calculate_surface_normals(nodeCoords, triIndices, nTriangles)
-
   n_hat = zeros(Float64, 3, nTriangles)
   vi = zeros(Float64, 3)
   vj = zeros(Float64, 3)

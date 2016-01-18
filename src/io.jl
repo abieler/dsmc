@@ -70,7 +70,7 @@ function load_ply_file(fileName::ASCIIString)
 end
 
 function save2vtk(oct)
-  if MyID == 2
+  if MyID >= -1000 
     println("saving simulation domain to disk")
     indexTransform = Dict{Int64, Int64}()
     indexTransform[1] = 1
@@ -168,11 +168,14 @@ function save2vtk(oct)
 
     write(oFile, "hasTriangles 1 " * string(nCells) * " float\n")
     for i=1:nCells
+      write(oFile, string(length(allCells[i].triangles)) * "\n")
+      #=
       if allCells[i].hasTriangles
         write(oFile, "1.0\n")
       else
         write(oFile, "0.0\n")
       end
+      =#
     end
 
     write(oFile, "procID 1 " * string(nCells) * " float\n")
@@ -208,16 +211,9 @@ function data2CSV(oct, oFile)
   end
 end
 
-function data2CSV_bkp(oct, oFile)
-  for child in oct.children
-    if child.isLeaf
-      for cell in child.cells
-          for p in cell.particles
-            @printf oFile "%.3e,%3.e,%.3e,%.3e,%.3e,%.3e,%.3e\n" p.x p.y p.z p.vx p.vy p.vz p.cellID
-          end
-      end
-    else
-      data2CSV(child, oFile)
-    end
-  end
+function data2CSV(particles::Particles, i)
+  p = particles
+  oFile = open("/home/abieler/scripts/julia/dsmc/output/collisions.csv", "a")
+  @printf oFile "%.3e,%3.e,%.3e,%.3e,%.3e,%.3e,%.3e\n" p.x[i] p.y[i] p.z[i] p.vx[i] p.vy[i] p.vz[i] p.procID[i]
+  close(oFile)
 end

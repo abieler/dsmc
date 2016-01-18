@@ -33,7 +33,7 @@ type UserSettings
 end
 
 # default user settings
-UserSettings() = UserSettings(200, "../input/sphere2.ply", 200.0, 200.0, 200.0,
+UserSettings() = UserSettings(200, "../input/sphere3.ply", 200.0, 200.0, 200.0,
                               5, 5, 5, 3, 1, 5000)
 
 type Triangle

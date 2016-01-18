@@ -5,20 +5,18 @@ include("octree.jl")
 include("Physical.jl")
 
 function insert_new_particles(oct::Block, coords)
- N = 500
+ N = 5000
+ R = 260.0
  procID = 0
  w = 1.0
  particleMass = 18
  for i=1:N
-   x = -1000.0 + rand() - 1.0
-   y = (-1.0 + 2.0 * rand()) * 250 - 500.0
-   z = (-1.0 + 2.0 * rand()) * 250
-   vx = 500.0
-   vy = 250.0
-   vz = 0.0
-   coords[1] = x
-   coords[2] = y
-   coords[3] = z
+   theta = 2.0 * pi * rand()
+   phi = acos(2.0 * rand() - 1.0)
+   x = R * cos(theta) * sin(phi)
+   y = R * sin(theta) * sin(phi)
+   z = R * cos(phi)
+   vx, vy, vz = -x, -y, -z
    assign_particle!(oct, procID, x, y, z, vx, vy, vz, particleMass, w, coords)
  end
 end
@@ -53,15 +51,16 @@ function insert_new_particles(oct::Block, body::SphericalBody, coords)
    w_factor = constant_weight(dt,S,particleMass)
 
   cellID = 0
-   for i=1:nParticles
-     theta = 2.0*pi*rand()
-     phi = acos(2.0*rand()-1.0)
-     x = S.SourceRadius*cos(theta)*sin(phi)
- 	   y = S.SourceRadius*sin(theta)*sin(phi)
- 	   z = S.SourceRadius*cos(phi)
- 	   vx, vy, vz = maxwell_boltzmann_flux_v(S.SourceTemperature,particleMass)
-     vx, vy, vz = rotate_vec_to_pos(vx, vy, vz, x, y, z)
-     newParticles[i] = Particle(cellID, x, y, z, vx, vy, vz, particleMass, w_factor)
+  for i=1:nParticles
+    theta = 2.0*pi*rand()
+    phi = acos(2.0*rand()-1.0)
+    x = S.SourceRadius*cos(theta)*sin(phi)
+    y = S.SourceRadius*sin(theta)*sin(phi)
+    z = S.SourceRadius*cos(phi)
+    vx, vy, vz = maxwell_boltzmann_flux_v(S.SourceTemperature,particleMass)
+    vx, vy, vz = rotate_vec_to_pos(vx, vy, vz, x, y, z)
+    #newParticles[i] = Particle(cellID, x, y, z, vx, vy, vz, particleMass, w_factor)
+    newParticles[i] = Particle(cellID, x, y, z, -vx, -vy, -vz, particleMass, w_factor)
   end
 
   assign_particles!(oct, newParticles, coords)
@@ -112,22 +111,36 @@ function move!(p::Particles, dt)
   end
 end
 
+function stop!(p::Particles)
+  for i=1:p.nParticles
+    @inbounds p.vx[i] = 0.0
+    @inbounds p.vy[i] = 0.0
+    @inbounds p.vz[i] = 0.0
+  end
+end
+
 function move!(cell::Cell, dt)
   for i=1:cell.particles.nParticles
     if length(cell.triangles) > 0
       gas_surface_collisions!(cell, dt)
       #println("checked for coll")
     else
-      @inbounds cell.particles.x[i] = cell.particles.x[i] + dt * cell.particles.vx[i]
-      @inbounds cell.particles.y[i] = cell.particles.y[i] + dt * cell.particles.vy[i]
-      @inbounds cell.particles.z[i] = cell.particles.z[i] + dt * cell.particles.vz[i]
+      move!(cell.particles, dt)
     end
   end
 end
 
 function gas_surface_collisions!(cell::Cell, dt)
-  TempBody = 250.0
   for i in cell.particles.nParticles
+    for k =1:3
+      nowpos[k] = 0.0
+      nextpos[k] = 0.0
+      vStartStop[k] = 0.0
+      pI[k] = 0.0
+      u[k] = 0.0
+      v[k] = 0.0
+      w[k] = 0.0
+    end
     nextpos[1] = cell.particles.x[i] + dt * cell.particles.vx[i]
     nextpos[2] = cell.particles.y[i] + dt * cell.particles.vy[i]
     nextpos[3] = cell.particles.z[i] + dt * cell.particles.vz[i]
@@ -141,12 +154,17 @@ function gas_surface_collisions!(cell::Cell, dt)
       cell.particles.x[i] = pIntersect[1]
       cell.particles.y[i] = pIntersect[2]
       cell.particles.z[i] = pIntersect[3]
-	    #vx, vy, vz = maxwell_boltzmann_flux_v(TempBody, cell.particles.mass[i])
-      #speed = sqrt(vx*vx + vy*vy + vz*vz)
+
       cell.particles.vx[i] = 0.0
       cell.particles.vy[i] = 0.0
       cell.particles.vz[i] = 0.0
+      data2CSV(cell.particles, i)
+    else
+      cell.particles.x[i] = cell.particles.x[i] + dt * cell.particles.vx[i]
+      cell.particles.y[i] = cell.particles.y[i] + dt * cell.particles.vy[i]
+      cell.particles.z[i] = cell.particles.z[i] + dt * cell.particles.vz[i]
     end
+    #stop!(cell.particles)
   end
 end
 

@@ -66,10 +66,15 @@ function refine_domain(oct, allTriangles, mySettings)
   iMax = mySettings.nMaxRefinementLevel
   nMaxTriangles = mySettings.nMaxTrianglesPerCell
   println(" - refining domain...")
-  assign_triangles!(oct, allTriangles)
+  allCells = Cell[]
+  all_cells!(oct, allCells)
+  assign_triangles!(oct, allTriangles, allCells)
   for i=1:iMax
     refine_tree(oct, nMaxTriangles)
-    assign_triangles!(oct, allTriangles)
+    allCells = Cell[]
+    all_cells!(oct, allCells)
+    assign_triangles!(oct, allTriangles, allCells)
+    @show(i)
   end
   pStart = [0.0, 0.0, 0.0]
   println(" - calculating cut cell volumes...")
