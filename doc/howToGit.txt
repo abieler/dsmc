@@ -18,7 +18,8 @@ General use:
   git push
   
   
-* checking out a copy file from master branch if you decide it is better to overwrite your changes
+* if you are not happy with the changes you made to the file, you can again set it back to 
+  whatever the status is on the master by checking out the corresponding file from there with:
   git checkout filename
 
 
