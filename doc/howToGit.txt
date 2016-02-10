@@ -3,7 +3,7 @@ First time setup:
   git config --global user.email yourEmail@foo.bar
   
   git config --global core.editor vim
-  (or)
+  (or of course)
   git config --global core.editor emacs
 
 General use:
@@ -16,6 +16,10 @@ General use:
   git add fileName.jl
   git commit fileName.jl
   git push
+  
+  
+* checking out a copy file from master branch if you decide it is better to overwrite your changes
+  git checkout filename
 
 
 * creating a new branch:
