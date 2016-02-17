@@ -1,3 +1,11 @@
+First time setup:
+  git config --global user.name yourUserName
+  git config --global user.email yourEmail@foo.bar
+  
+  git config --global core.editor vim
+  (or of course)
+  git config --global core.editor emacs
+
 General use:
 
 * get the repository the first time:
@@ -8,6 +16,11 @@ General use:
   git add fileName.jl
   git commit
   git push
+  
+  
+* if you are not happy with the changes you made to the file, you can again set it back to 
+  whatever the status is on the master by checking out the corresponding file from there with:
+  git checkout filename
 
 
 * creating a new branch:
