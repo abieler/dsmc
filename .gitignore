@@ -1,3 +1,4 @@
+output/
 output/domain.vtk
 **/output/*.vtk
 *.vtu

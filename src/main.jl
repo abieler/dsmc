@@ -67,7 +67,7 @@ end
     @everywhere time_step(oct, lostParticles, coords)
     @everywhere send_particles_to_cpu(lostParticles)
     @everywhere lostParticles.nParticles = 0
-    if iteration % 50 == 0
+    if iteration % 20 == 0
       for iProc in workers()
         remotecall_fetch(iProc, save_particles, "../output/particles_iProc_" *string(iProc) * "_" * string(iteration) * ".csv")
       end

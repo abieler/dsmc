@@ -122,8 +122,9 @@ end
 function move!(cell::Cell, dt)
   for i=1:cell.particles.nParticles
     if length(cell.triangles) > 0
-      gas_surface_collisions!(cell, dt)
+      #gas_surface_collisions!(cell, dt)
       #println("checked for coll")
+      move!(cell.particles, dt)
     else
       move!(cell.particles, dt)
     end
@@ -437,5 +438,5 @@ function time_step(temperature,mass)
 end
 
 function get_time_step(b::Block)
-  return 0.001
+  return 0.0001
 end
