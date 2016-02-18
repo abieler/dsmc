@@ -1,9 +1,3 @@
-using Distributions
-using Types
-using Triangles
-include("octree.jl")
-include("Physical.jl")
-
 function insert_new_particles(oct::Block, coords)
  N = 5000
  R = 260.0

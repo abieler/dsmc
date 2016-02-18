@@ -1,8 +1,3 @@
-using Triangles
-using Types
-using RayTrace
-
-
 function collect_blocks!(oct::Block, allBlocks)
   for child in oct.children
     if child.isLeaf

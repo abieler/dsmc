@@ -1,5 +1,3 @@
-using Types
-
 mySettings = UserSettings()
 body = MeshBody
 

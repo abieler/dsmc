@@ -1,10 +1,6 @@
-using Triangles
-using Types
-@everywhere include("gas.jl")
-@everywhere include("octree.jl")
-@everywhere include("Physical.jl")
-@everywhere include("io.jl")
-@everywhere include("user.jl")
+using DSMC
+@everywhere using DSMC
+@everywhere include("constants.jl")
 
 @everywhere const global MyID = myid()
 @everywhere const global nowpos = zeros(Float64, 3)
@@ -22,15 +18,6 @@ using Types
 @everywhere coords = zeros(Float64, 3)
 
 
-type SphericalBody
-  radius::Float64
-  mass::Float64
-  density::Float64
-  temperature::Float64
-  nNewParticles::Vector{Int64}
-  particleMass::Vector{Int64}
-  particleWeight::Vector{Float64}
-end
 @everywhere S = SphericalBody(128.0, 1e24, 3000.0, 250.0,[500],[18],[1e20])
 ################################################################################
 # load shape model

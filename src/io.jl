@@ -1,6 +1,3 @@
-using Triangles
-include("octree.jl")
-
 function load_ply_file(fileName::ASCIIString)
   if myid() == 1
     println(" - loading surface mesh...")
@@ -70,7 +67,7 @@ function load_ply_file(fileName::ASCIIString)
 end
 
 function save2vtk(oct)
-  if MyID >= -1000 
+  if MyID >= -1000
     println("saving simulation domain to disk")
     indexTransform = Dict{Int64, Int64}()
     indexTransform[1] = 1
