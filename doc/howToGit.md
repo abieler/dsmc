@@ -1,33 +1,32 @@
 First time setup:
-  About you:
+#### About you:
   ```
   git config --global user.name yourUserName
   git config --global user.email yourEmail@foo.bar
   ```
-  Set up your favourite editor to be used:
+#### Set up your favourite editor to be used:
   ```
   git config --global core.editor <editorname>
   ```
   with editorname being whatever you prefer (vim, emacs, nano...)
 
   
-  Setting up a diff tool:
+#### Setting up a diff tool:
   ```
   git config --global diff.tool <toolname>
   ```
   Again with your choice of the difftool (tkdiff, meld...)
 
-General use:
+## General use:
 
-  get the repository the first time:
-  ---------------------------------
+#### get the repository the first time:
+
   ```
   git clone https://github.com/abieler/dsmc.git
   ```
 
 
-  modifying the file fileName.jl and commiting changes:
-  ---
+#### modifying the file fileName.jl and commiting changes:
   ```
   git add fileName.jl
   git commit
@@ -42,7 +41,7 @@ General use:
   ```
 
 
-* creating a new branch:
+#### creating a new branch:
   ```
   git checkout -b newBranchName
   ```
@@ -50,26 +49,27 @@ General use:
   the new branch as usual)
 
 
-* push your new branch to remote:
+#### push your new branch to remote:
+
   ```
   git push --set-upstream origin newBranchName
   ```
 
-* get branch from remote to your local box
+#### get branch from remote to your local box
   ```
   git fetch origin branchName
   git checkout branchName
   ```
   
 
-* changing between branches:
+#### changing between branches:
   ```
   git checkout branchName
   git checkout master (to check back to master)
   ```
 
 
-* merging new branch with master:
+#### merging new branch with master:
   ```
   git checkout master (change back to master branch)
   git merge newBranchName
