@@ -19,13 +19,15 @@ First time setup:
 
 General use:
 
-* get the repository the first time:
+  get the repository the first time:
+  ---
   ```
   git clone https://github.com/abieler/dsmc.git
   ```
 
 
-* modifying the file fileName.jl and commiting changes:
+  modifying the file fileName.jl and commiting changes:
+  ---
   ```
   git add fileName.jl
   git commit
