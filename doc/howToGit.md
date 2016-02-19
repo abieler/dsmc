@@ -1,4 +1,4 @@
-First time setup:
+#First time setup:
 #### About you:
   ```
   git config --global user.name yourUserName
@@ -17,7 +17,7 @@ First time setup:
   ```
   Again with your choice of the difftool (tkdiff, meld...)
 
-## General use:
+# General use:
 
 #### get the repository the first time:
 
