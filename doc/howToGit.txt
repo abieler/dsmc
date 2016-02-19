@@ -1,10 +1,21 @@
 First time setup:
+  About you:
+  ```
   git config --global user.name yourUserName
   git config --global user.email yourEmail@foo.bar
+  ```
+  Set up your favourite editor to be used:
+  ```
+  git config --global core.editor <editorname>
+  ```
+  with <editorname> being whatever you prefer (vim, emacs, nano...)
+
   
-  git config --global core.editor vim
-  (or of course)
-  git config --global core.editor emacs
+  Setting up a diff tool:
+  ```
+  git config --global diff.tool <toolname>
+  ```
+  Again with your choice of the difftool (tkdiff, meld...)
 
 General use:
 
