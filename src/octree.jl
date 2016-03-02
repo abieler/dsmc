@@ -1,5 +1,5 @@
-function collect_blocks!(oct::Block, allBlocks)
-  for child in oct.children
+function collect_blocks!(domain::Block, allBlocks)
+  for child in domain.children
     if child.isLeaf
       push!(allBlocks, child)
     else
@@ -17,16 +17,16 @@ function initialize_domain(mySettings)
   isLeaf = true
   refLevel = 0
 
-  oct = Block(origin, halfSize, isLeaf, Array(Block,8), Cell[], refLevel,
-              nCellsX, nCellsY, nCellsZ, 0)
+  domain = Block(origin, halfSize, isLeaf, Array(Block,8), Cell[], refLevel,
+              nCellsX, nCellsY, nCellsZ, MyID)
 
-  split_block(oct)
-  return oct
+  split_block(domain)
+  return domain
 end
 
 
-function label_cells!(oct, maxLabel=0)
- for block in oct.children
+function label_cells!(domain, maxLabel=0)
+ for block in domain.children
    if block.isLeaf
      for cell in block.cells
        cell.ID = maxLabel
@@ -38,10 +38,10 @@ function label_cells!(oct, maxLabel=0)
  end
 end
 
-function blocks2proc!(oct::Block, i)
+function blocks2proc!(domain::Block, i)
   iMax = nworkers()
   workerID = sort(workers())
-  for block in oct.children
+  for block in domain.children
     if block.isLeaf
       if i > iMax
         i = 1
@@ -57,25 +57,24 @@ function blocks2proc!(oct::Block, i)
   end
 end
 
-function refine_domain(oct, allTriangles, mySettings)
+function refine_domain(domain, allTriangles, mySettings)
   iMax = mySettings.nMaxRefinementLevel
   nMaxTriangles = mySettings.nMaxTrianglesPerCell
   println(" - refining domain...")
   allCells = Cell[]
-  all_cells!(oct, allCells)
-  assign_triangles!(oct, allTriangles, allCells)
+  all_cells!(domain, allCells)
+  assign_triangles!(domain, allTriangles, allCells)
   for i=1:iMax
-    refine_tree(oct, nMaxTriangles)
+    refine_tree(domain, nMaxTriangles)
     allCells = Cell[]
-    all_cells!(oct, allCells)
-    assign_triangles!(oct, allTriangles, allCells)
-    @show(i)
+    all_cells!(domain, allCells)
+    assign_triangles!(domain, allTriangles, allCells)
   end
   pStart = [0.0, 0.0, 0.0]
   println(" - calculating cut cell volumes...")
-  cut_cell_volume!(oct, pStart, 2000)
-  label_cells!(oct)
-  blocks2proc!(oct, 1)
+  cut_cell_volume!(domain, pStart, 2000)
+  label_cells!(domain)
+  blocks2proc!(domain, 1)
 end
 
 function pick_pos_in_flow_filed(cell, pStart, pStop, vStartStop)
@@ -108,11 +107,11 @@ function pick_pos_in_flow_filed(cell, pStart, pStop, vStartStop)
 end
 
 
-function cut_cell_volume!(oct, pStart, N)
+function cut_cell_volume!(domain, pStart, N)
   pRandom = zeros(Float64, 3)
   vRandom = zeros(Float64, 3)
   r = zeros(Float64, 3)
-  for block in oct.children
+  for block in domain.children
     if block.isLeaf
       for cell in block.cells
         if cell.hasTriangles
@@ -174,8 +173,8 @@ function refine(b::Block, nCellsMax)
   end
 end
 
-function refine_tree(oct, nCellsMax=10)
-  for block in oct.children
+function refine_tree(domain, nCellsMax=10)
+  for block in domain.children
     if block.isLeaf
       refine(block, nCellsMax)
     else
@@ -319,8 +318,8 @@ function block_containing_point(block::Block, point::Array{Float64,1})
 
 end
 
-function cell_containing_point(oct::Block, point::Array{Float64, 1})
-  foundBlock, block = block_containing_point(oct, point)
+function cell_containing_point(domain::Block, point::Array{Float64, 1})
+  foundBlock, block = block_containing_point(domain, point)
   if foundBlock
     nx = block.nx
     ny = block.ny
@@ -374,9 +373,9 @@ function triLinearInterpolation(cell::Cell, point::Array{Float64,1})
   return c
 end
 
-function is_out_of_bounds(oct, r)
+function is_out_of_bounds(domain, r)
   for i=1:3
-    if ((r[i] > (oct.origin[i] + oct.halfSize[i])) | (r[i] < (oct.origin[i]-oct.halfSize[i])))
+    if ((r[i] > (domain.origin[i] + domain.halfSize[i])) | (r[i] < (domain.origin[i]-domain.halfSize[i])))
       return true
     end
   end

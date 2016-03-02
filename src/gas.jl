@@ -1,4 +1,4 @@
-function insert_new_particles(oct::Block, coords)
+function insert_new_particles(domain::Block, coords)
  N = 5000
  R = 260.0
  procID = 0
@@ -11,11 +11,11 @@ function insert_new_particles(oct::Block, coords)
    y = R * sin(theta) * sin(phi)
    z = R * cos(phi)
    vx, vy, vz = -x, -y, -z
-   assign_particle!(oct, procID, x, y, z, vx, vy, vz, particleMass, w, coords)
+   assign_particle!(domain, procID, x, y, z, vx, vy, vz, particleMass, w, coords)
  end
 end
 
-function insert_new_particles(oct::Block, body::MeshBody, coords)
+function insert_new_particles(domain::Block, body::MeshBody, coords)
  procID = 0
  nSpecies = length(body.particleMass)
  for tri in body.triangles
@@ -31,14 +31,14 @@ function insert_new_particles(oct::Block, body::MeshBody, coords)
   	    vx, vy, vz = maxwell_boltzmann_flux_v(body.temperature,
                                               particleMass)
         vx, vy, vz = rotate_vec_to_pos(vx, vy, vz, x, y, z)
-        assign_particle!(oct, procID, x, y, z, vx, vy, vz,
+        assign_particle!(domain, procID, x, y, z, vx, vy, vz,
                          particleMass, w, coords)
      end
    end
  end
 end
 
-function insert_new_particles(oct::Block, body::SphericalBody, coords)
+function insert_new_particles(domain::Block, body::SphericalBody, coords)
    newParticles = Array(Particle, nParticles)
 
    particleMass = 28.0*amu
@@ -57,7 +57,7 @@ function insert_new_particles(oct::Block, body::SphericalBody, coords)
     newParticles[i] = Particle(cellID, x, y, z, -vx, -vy, -vz, particleMass, w_factor)
   end
 
-  assign_particles!(oct, newParticles, coords)
+  assign_particles!(domain, newParticles, coords)
 end
 function accelerate!(pos, p::Particle, accl, body)
   r = sqrt(pos[1]^2 +pos[2]^2 + pos[3]^2)
@@ -145,7 +145,10 @@ function gas_surface_collisions!(cell::Cell, dt)
     iTri, pIntersect = iTriangleIntersect(cell.triangles, nowpos, nextpos,
                                           vStartStop, pI, u, v, w)
     if iTri != -1
-      println("collision!")
+      println("r_old       : ", sqrt(nowpos[1]^2 + nowpos[2]^2 + nowpos[3]^2))
+      println("collision! r: ", sqrt(pIntersect[1]^2 + pIntersect[2]^2 + pIntersect[3]^2))
+      println("  ")
+
       cell.particles.x[i] = pIntersect[1]
       cell.particles.y[i] = pIntersect[2]
       cell.particles.z[i] = pIntersect[3]
@@ -200,8 +203,8 @@ function rotate_vec_to_pos(vecx,vecy,vecz,posx,posy,posz)
   return rotated_vectorx, rotated_vectory, rotated_vectorz
 end
 
-function compute_macroscopic_params(oct)
-  for block in oct.children
+function compute_macroscopic_params(domain)
+  for block in domain.children
     if (block.isLeaf == 1)
       if block.procID == MyID
         compute_params(block)
@@ -281,8 +284,8 @@ function send_particles_to_cpu(lostParticles)
   nothing
 end
 
-function time_step(oct::Block, lostParticles, coords)
-  for block in oct.children
+function time_step(domain::Block, lostParticles, coords)
+  for block in domain.children
     if block.isLeaf == 1
       if block.procID == MyID
         perform_time_step(block, lostParticles, coords)
@@ -299,7 +302,7 @@ function perform_time_step(b::Block, lostParticles, coords)
   for cell in b.cells
     if cell.particles.nParticles > 0
       move!(cell, dt)
-      assign_particles!(oct, cell.particles, coords, lostParticles)
+      assign_particles!(domain, cell.particles, coords, lostParticles)
     end
   end
   nothing
@@ -314,7 +317,7 @@ function assign_particles_rem!(p_arr)
     coords[1] = p.x[i]
     coords[2] = p.y[i]
     coords[3] = p.z[i]
-    foundCell, cell, iProc = cell_containing_point(oct, coords)
+    foundCell, cell, iProc = cell_containing_point(domain, coords)
     add!(p, cell.particles, i)
   end
   p = Particles(1)
@@ -352,14 +355,14 @@ function add!(from::Particles, to::Particles, i::Int64)
   to.weight[n] = from.weight[i]
 end
 
-function assign_particles!(oct::Block, p::Particles, coords, lostParticles)
+function assign_particles!(domain::Block, p::Particles, coords, lostParticles)
   rmIndexes = Int64[]
   for i=1:p.nParticles
     coords[1] = p.x[i]
     coords[2] = p.y[i]
     coords[3] = p.z[i]
-    if !is_out_of_bounds(oct, coords)
-      foundCell, cell, iProc = cell_containing_point(oct, coords)
+    if !is_out_of_bounds(domain, coords)
+      foundCell, cell, iProc = cell_containing_point(domain, coords)
       p.procID[i] = iProc
       if iProc != MyID
         add!(p, lostParticles, i)
@@ -391,12 +394,12 @@ function allocate_particles!(p::Particles; N=25)
   nothing
 end
 
-function assign_particle!(oct, procID, x, y, z, vx, vy, vz,
+function assign_particle!(domain, procID, x, y, z, vx, vy, vz,
                           particleMass, w, coords)
   coords[1] = x
   coords[2] = y
   coords[3] = z
-  foundCell, cell, iProc = cell_containing_point(oct, coords)
+  foundCell, cell, iProc = cell_containing_point(domain, coords)
   if foundCell && (iProc == MyID)
     maxParticles = length(cell.particles.x)
     iParticle = cell.particles.nParticles + 1

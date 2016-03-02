@@ -1,3 +1,6 @@
+function sayHi(domain)
+  @show(domain.procID)
+end
 function load_ply_file(fileName::ASCIIString)
   if myid() == 1
     println(" - loading surface mesh...")
@@ -66,7 +69,7 @@ function load_ply_file(fileName::ASCIIString)
   return nTriangles, allTriangles, totalSurfaceArea
 end
 
-function save2vtk(oct)
+function save2vtk(domain)
   if MyID >= -1000
     println("saving simulation domain to disk")
     indexTransform = Dict{Int64, Int64}()
@@ -80,7 +83,7 @@ function save2vtk(oct)
     indexTransform[8] = 8
 
     allCells = Cell[]
-    all_cells!(oct, allCells)
+    all_cells!(domain, allCells)
     nCells = length(allCells)
     println("nCells: ", nCells)
     epsilon = 1e-10
@@ -166,13 +169,6 @@ function save2vtk(oct)
     write(oFile, "hasTriangles 1 " * string(nCells) * " float\n")
     for i=1:nCells
       write(oFile, string(length(allCells[i].triangles)) * "\n")
-      #=
-      if allCells[i].hasTriangles
-        write(oFile, "1.0\n")
-      else
-        write(oFile, "0.0\n")
-      end
-      =#
     end
 
     write(oFile, "procID 1 " * string(nCells) * " float\n")
@@ -188,13 +184,13 @@ function save_particles(fileName)
     println("saving particles to file")
     oFile = open(fileName, "w")
     write(oFile, "x,y,z,vx,vy,vz,cellID\n")
-    data2CSV(oct, oFile)
+    data2CSV(domain, oFile)
     close(oFile)
     println("done!")
 end
 
-function data2CSV(oct, oFile)
-  for child in oct.children
+function data2CSV(domain, oFile)
+  for child in domain.children
     if child.isLeaf
       for cell in child.cells
         p = cell.particles

@@ -2,21 +2,6 @@ using DSMC
 @everywhere using DSMC
 @everywhere include("constants.jl")
 
-@everywhere const global MyID = myid()
-@everywhere const global nowpos = zeros(Float64, 3)
-@everywhere const global nextpos = zeros(Float64, 3)
-@everywhere const global vStartStop = zeros(Float64, 3)
-@everywhere const global pI = zeros(Float64, 3)
-@everywhere const global u = zeros(Float64, 3)
-@everywhere const global v = zeros(Float64, 3)
-@everywhere const global w = zeros(Float64, 3)
-
-@everywhere lostParticles = Particles(200)
-@everywhere lostIDs = Int64[]
-@everywhere myPoint = zeros(Float64, 3)
-@everywhere particle_buffer = Array(Particle, 400)
-@everywhere coords = zeros(Float64, 3)
-
 
 @everywhere S = SphericalBody(128.0, 1e24, 3000.0, 250.0,[500],[18],[1e20])
 ################################################################################
@@ -29,32 +14,34 @@ using DSMC
 ################################################################################
 # initialize simulation domain
 ################################################################################
-@everywhere oct = initialize_domain(mySettings)
+#domain = initialize_domain(mySettings)
 
 ################################################################################
 # refine domain and compute volume of cut cells
 ################################################################################
-@everywhere refine_domain(oct, allTriangles, mySettings)
+@everywhere refine_domain(domain, allTriangles, mySettings)
 @everywhere allBlocks = Block[]
-@everywhere collect_blocks!(oct, allBlocks)
+@everywhere collect_blocks!(domain, allBlocks)
 
+@everywhere sayHi(domain)
+readline(STDIN)
 ################################################################################
 # main loop
 ################################################################################
 @everywhere const nParticles = mySettings.nNewParticlesPerIteration
 @everywhere const f = nParticles / surfaceArea
 @time begin
-  for iteration = 1:mySettings.nIterations
-    #@everywhere insert_new_particles(oct, body, myPoint)
-    if iteration < 2
-      #@everywhere insert_new_particles(oct, myPoint)
-      @everywhere insert_new_particles(oct, myPoint)
+  for iteration = 0:mySettings.nIterations
+    #@everywhere insert_new_particles(domain, body, myPoint)
+    if iteration < 1
+      #@everywhere insert_new_particles(domain, myPoint)
+      @everywhere insert_new_particles(domain, myPoint)
     end
-    @everywhere compute_macroscopic_params(oct)
-    @everywhere time_step(oct, lostParticles, coords)
+    @everywhere compute_macroscopic_params(domain)
+    @everywhere time_step(domain, lostParticles, coords)
     @everywhere send_particles_to_cpu(lostParticles)
     @everywhere lostParticles.nParticles = 0
-    if iteration % 20 == 0
+    if iteration % 10 == 0
       for iProc in workers()
         remotecall_fetch(iProc, save_particles, "../output/particles_iProc_" *string(iProc) * "_" * string(iteration) * ".csv")
       end
@@ -66,4 +53,4 @@ end
 ################################################################################
 # save results
 ################################################################################
-@everywhere save2vtk(oct)
+@everywhere save2vtk(domain)
