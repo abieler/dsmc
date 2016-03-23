@@ -38,10 +38,10 @@ function label_cells!(domain, maxLabel=0)
  end
 end
 
-function blocks2proc!(domain::Block, i)
+function blocks2proc!(b::Block, i)
   iMax = nworkers()
   workerID = sort(workers())
-  for block in domain.children
+  for block in b.children
     if block.isLeaf
       if i > iMax
         i = 1
@@ -319,6 +319,7 @@ function block_containing_point(block::Block, point::Array{Float64,1})
 end
 
 function cell_containing_point(domain::Block, point::Array{Float64, 1})
+  @show(point)
   foundBlock, block = block_containing_point(domain, point)
   if foundBlock
     nx = block.nx
@@ -347,6 +348,9 @@ function cell_containing_point(domain::Block, point::Array{Float64, 1})
     end
 
     cellIndex = round(Int, 1 + fx + fy*nx + fz*nx*ny)
+    @show(block.cells[cellIndex].ID)
+    @show(block.cells[cellIndex].origin)
+    @show(block.procID)
     return true, block.cells[cellIndex], block.procID
   else
     return false, block.cells[1], block.procID

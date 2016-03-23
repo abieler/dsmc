@@ -1,7 +1,14 @@
+@everywhere include("constants.jl")
 using DSMC
 @everywhere using DSMC
-@everywhere include("constants.jl")
 
+function sendtosimple(iProc, nm, val)
+  @spawnat(iProc, (Main, Expr(:(=), $nm, $val)))
+end
+
+macro sendto(iProc, nm, val)
+  return :(sendtosimple($iProc, $nm, $var))
+end
 
 @everywhere S = SphericalBody(128.0, 1e24, 3000.0, 250.0,[500],[18],[1e20])
 ################################################################################
@@ -22,21 +29,39 @@ using DSMC
 @everywhere refine_domain(domain, allTriangles, mySettings)
 @everywhere allBlocks = Block[]
 @everywhere collect_blocks!(domain, allBlocks)
+#=
+println("distribute it")
+for iProc in workers()
+  @show(iProc)
+  @spawnat(iProc, (Main, Expr(:(=), 'domain', domain)))
+  @spawnat(iProc, (Main, Expr(:(=), 'allBlocks', allBlocks)))
+end
+println("distribute it done")
+=#
 
-@everywhere sayHi(domain)
-readline(STDIN)
+@everywhere const nParticles = mySettings.nNewParticlesPerIteration
+@everywhere const f = nParticles / surfaceArea
+#=
+for kk in 1:100
+  @everywhere x1 = -200.0 + randn() * 200.
+  @everywhere x2 = -200.0 + randn() * 200.
+  @everywhere x3 = -200.0 + randn() * 200.
+  @everywhere coords = [x1,x2,x3]
+  @everywhere cell_containing_point(domain, coords)
+end
+=#
+
 ################################################################################
 # main loop
 ################################################################################
-@everywhere const nParticles = mySettings.nNewParticlesPerIteration
-@everywhere const f = nParticles / surfaceArea
+#@everywhere const nParticles = mySettings.nNewParticlesPerIteration
+#@everywhere const f = nParticles / surfaceArea
 @time begin
   for iteration = 0:mySettings.nIterations
-    #@everywhere insert_new_particles(domain, body, myPoint)
     if iteration < 1
-      #@everywhere insert_new_particles(domain, myPoint)
       @everywhere insert_new_particles(domain, myPoint)
     end
+      readline(STDIN)
     @everywhere compute_macroscopic_params(domain)
     @everywhere time_step(domain, lostParticles, coords)
     @everywhere send_particles_to_cpu(lostParticles)
@@ -45,12 +70,12 @@ readline(STDIN)
       for iProc in workers()
         remotecall_fetch(iProc, save_particles, "../output/particles_iProc_" *string(iProc) * "_" * string(iteration) * ".csv")
       end
-    end
     @show(iteration)
+    end
   end
 end
 
 ################################################################################
 # save results
 ################################################################################
-@everywhere save2vtk(domain)
+save2vtk(domain)

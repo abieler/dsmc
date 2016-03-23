@@ -1,5 +1,5 @@
 function insert_new_particles(domain::Block, coords)
- N = 5000
+ N = 5
  R = 260.0
  procID = 0
  w = 1.0
@@ -11,7 +11,8 @@ function insert_new_particles(domain::Block, coords)
    y = R * sin(theta) * sin(phi)
    z = R * cos(phi)
    vx, vy, vz = -x, -y, -z
-   assign_particle!(domain, procID, x, y, z, vx, vy, vz, particleMass, w, coords)
+   assign_particle!(domain, procID, x, y, z, vx, vy, vz,
+                    particleMass, w, coords)
  end
 end
 
@@ -400,6 +401,8 @@ function assign_particle!(domain, procID, x, y, z, vx, vy, vz,
   coords[2] = y
   coords[3] = z
   foundCell, cell, iProc = cell_containing_point(domain, coords)
+
+
   if foundCell && (iProc == MyID)
     maxParticles = length(cell.particles.x)
     iParticle = cell.particles.nParticles + 1
