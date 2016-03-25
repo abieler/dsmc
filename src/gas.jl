@@ -1,20 +1,44 @@
+
 function insert_new_particles(domain::Block, coords)
- N = 5
- R = 260.0
+ N = 500
+ R = 10.0
  procID = 0
  w = 1.0
  particleMass = 18
+ v = zeros(Float64,3)
+ pos = zeros(Float64, 3)
  for i=1:N
    theta = 2.0 * pi * rand()
    phi = acos(2.0 * rand() - 1.0)
-   x = R * cos(theta) * sin(phi)
+   x = 800.0 + R * cos(theta) * sin(phi)
    y = R * sin(theta) * sin(phi)
-   z = R * cos(phi)
-   vx, vy, vz = -x, -y, -z
+   z = 20.0 + R * cos(phi)
+   vx = -5000.0
+   vy = 0.0
+   vz = 0.0
    assign_particle!(domain, procID, x, y, z, vx, vy, vz,
                     particleMass, w, coords)
  end
 end
+
+
+#=
+function insert_new_particles(domain::Block, coords)
+  for i in 1:10
+    procID = 0
+    w = 1.0
+    particleMass = 18
+    x = 600.0
+    y = 0.0 + 2*i
+    z = 0.0
+    vx = -5000.0
+    vy = 0.0
+    vz = 0.0
+    assign_particle!(domain, procID, x, y, z, vx, vy, vz,
+                     particleMass, w, coords)
+  end
+end
+=#
 
 function insert_new_particles(domain::Block, body::MeshBody, coords)
  procID = 0
@@ -104,6 +128,9 @@ function move!(p::Particles, dt)
     @inbounds p.y[i] = p.y[i] + dt * p.vy[i]
     @inbounds p.z[i] = p.z[i] + dt * p.vz[i]
   end
+  #fid = open("../output/traj.csv", "a")
+  #write(fid, string(p.x[1]),",", string(p.y[1]), ",", string(p.z[1]), "\n")
+  #close(fid)
 end
 
 function stop!(p::Particles)
@@ -115,14 +142,12 @@ function stop!(p::Particles)
 end
 
 function move!(cell::Cell, dt)
-  for i=1:cell.particles.nParticles
-    if length(cell.triangles) > 0
-      #gas_surface_collisions!(cell, dt)
-      #println("checked for coll")
-      move!(cell.particles, dt)
-    else
-      move!(cell.particles, dt)
-    end
+  if length(cell.triangles) > 0
+    #gas_surface_collisions!(cell, dt)
+    #println("checked for coll")
+    move!(cell.particles, dt)
+  else
+    move!(cell.particles, dt)
   end
 end
 
@@ -263,21 +288,25 @@ function rebuild_particles(p_arr)
 end
 
 function send_particles_to_cpu(lostParticles)
-  if (MyID in workers() & (lostParticles.nParticles > 0))
-    lostIDs = lostParticles.procID
-    uniqueIDs = unique(lostIDs)
-    splice!(uniqueIDs, findfirst(uniqueIDs, 0))
-    @sync begin
-      for iProc in unique(lostIDs)
-        @async begin
-          particles_to_send = Particles(count(i->i==iProc, lostIDs))
-          for k = 1:length(lostIDs)
-            if lostIDs[k] == iProc
-              add!(lostParticles, particles_to_send, k)
+  if MyID > 1
+    doSend = (MyID in workers()) & (lostParticles.nParticles > 0)
+    if doSend == true
+      lostIDs = lostParticles.procID
+      uniqueIDs = unique(lostIDs)
+      splice!(uniqueIDs, findfirst(uniqueIDs, 0))
+      #println("sending ", lostParticles.nParticles, " to iprocs: ", uniqueIDs)
+      @sync begin
+        for iProc in uniqueIDs
+          @async begin
+            particles_to_send = Particles(count(i->i==iProc, lostIDs))
+            for k = 1:length(lostIDs)
+              if lostIDs[k] == iProc
+                add!(lostParticles, particles_to_send, k)
+              end
             end
+            p_arr = decompose_particles(particles_to_send)
+            remotecall_fetch(iProc, assign_particles_rem!, p_arr, MyID)
           end
-          p_arr = decompose_particles(particles_to_send)
-          remotecall_fetch(iProc, assign_particles_rem!, p_arr, MyID)
         end
       end
     end
@@ -309,19 +338,17 @@ function perform_time_step(b::Block, lostParticles, coords)
   nothing
 end
 
-function assign_particles_rem!(p_arr)
+function assign_particles_rem!(p_arr, senderID)
   coords = zeros(Float64, 3)
-  println("got ", size(p_arr, 2), " particles.")
+  #println("got ", size(p_arr, 2), " particles from ", senderID)
   p = rebuild_particles(p_arr)
-  println("rebuilt")
-  for i in p.nParticles
+  for i in 1:p.nParticles
     coords[1] = p.x[i]
     coords[2] = p.y[i]
     coords[3] = p.z[i]
     foundCell, cell, iProc = cell_containing_point(domain, coords)
     add!(p, cell.particles, i)
   end
-  p = Particles(1)
   nothing
 end
 
@@ -402,8 +429,7 @@ function assign_particle!(domain, procID, x, y, z, vx, vy, vz,
   coords[3] = z
   foundCell, cell, iProc = cell_containing_point(domain, coords)
 
-
-  if foundCell && (iProc == MyID)
+  if (foundCell) & (iProc == MyID)
     maxParticles = length(cell.particles.x)
     iParticle = cell.particles.nParticles + 1
     cell.particles.nParticles += 1

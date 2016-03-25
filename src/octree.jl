@@ -319,7 +319,6 @@ function block_containing_point(block::Block, point::Array{Float64,1})
 end
 
 function cell_containing_point(domain::Block, point::Array{Float64, 1})
-  @show(point)
   foundBlock, block = block_containing_point(domain, point)
   if foundBlock
     nx = block.nx
@@ -346,11 +345,7 @@ function cell_containing_point(domain::Block, point::Array{Float64, 1})
     if fz > (nz-1.0)
         fz = nz - 1.0
     end
-
     cellIndex = round(Int, 1 + fx + fy*nx + fz*nx*ny)
-    @show(block.cells[cellIndex].ID)
-    @show(block.cells[cellIndex].origin)
-    @show(block.procID)
     return true, block.cells[cellIndex], block.procID
   else
     return false, block.cells[1], block.procID

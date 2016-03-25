@@ -61,17 +61,17 @@ end
     if iteration < 1
       @everywhere insert_new_particles(domain, myPoint)
     end
-      readline(STDIN)
+    if iteration % 20 == 0
+      for iProc in workers()
+        remotecall_fetch(iProc, save_particles, "../output/particles_iProc_" *string(iProc) * "_" * string(iteration) * ".csv")
+      end
+    end
     @everywhere compute_macroscopic_params(domain)
     @everywhere time_step(domain, lostParticles, coords)
     @everywhere send_particles_to_cpu(lostParticles)
     @everywhere lostParticles.nParticles = 0
-    if iteration % 10 == 0
-      for iProc in workers()
-        remotecall_fetch(iProc, save_particles, "../output/particles_iProc_" *string(iProc) * "_" * string(iteration) * ".csv")
-      end
     @show(iteration)
-    end
+    #readline(STDIN)
   end
 end
 

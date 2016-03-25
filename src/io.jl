@@ -1,6 +1,3 @@
-function sayHi(domain)
-  @show(domain.procID)
-end
 function load_ply_file(fileName::ASCIIString)
   if myid() == 1
     println(" - loading surface mesh...")
@@ -195,7 +192,8 @@ function data2CSV(domain, oFile)
       for cell in child.cells
         p = cell.particles
         for i=1:p.nParticles
-          @printf oFile "%.3e,%3.e,%.3e,%.3e,%.3e,%.3e,%.3e\n" p.x[i] p.y[i] p.z[i] p.vx[i] p.vy[i] p.vz[i] p.procID[i]
+          #println("procID: ", cell.procID, "   cellID: ", cell.ID, "   x: ", p.x[i], "   vx: ", p.vx[i])
+          @printf oFile "%.6e,%6.e,%.6e,%.6e,%.6e,%.6e,%.6e\n" p.x[i] p.y[i] p.z[i] p.vx[i] p.vy[i] p.vz[i] p.procID[i]
         end
       end
     else
