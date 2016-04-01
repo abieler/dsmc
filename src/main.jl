@@ -50,7 +50,7 @@ println("distribute it done")
     if iteration < 1
       @everywhere insert_new_particles(domain, myPoint)
     end
-    if iteration % 20 == 0
+    if iteration % 5 == 0
       for iProc in workers()
         remotecall_fetch(iProc, save_particles, "../output/particles_iProc_" *string(iProc) * "_" * string(iteration) * ".csv")
       end

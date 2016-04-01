@@ -1,7 +1,7 @@
 mySettings = UserSettings()
 body = MeshBody
 
-mySettings.nIterations = 5000
+mySettings.nIterations = 800
 mySettings.meshFileName = "../input/sphere.ply"
 
 mySettings.domainSizeX = 5000.0

@@ -1,4 +1,5 @@
 
+#=
 function insert_new_particles(domain::Block, coords)
  N = 500
  R = 10.0
@@ -20,25 +21,28 @@ function insert_new_particles(domain::Block, coords)
                     particleMass, w, coords)
  end
 end
+=#
 
 
-#=
 function insert_new_particles(domain::Block, coords)
-  for i in 1:10
-    procID = 0
-    w = 1.0
-    particleMass = 18
-    x = 600.0
-    y = 0.0 + 2*i
-    z = 0.0
-    vx = -5000.0
-    vy = 0.0
-    vz = 0.0
-    assign_particle!(domain, procID, x, y, z, vx, vy, vz,
-                     particleMass, w, coords)
+  k = 0
+  for j in 1:5
+    for i in 1:100
+        procID = 0
+        w = 1.0
+        particleMass = 18
+        x = 400.0 + 20 * randn() 
+        y = 0.0 +  3 * randn()
+        z = 0.0
+        vx = -5000.0
+        vy = 0.0
+        vz = 0.0
+        assign_particle!(domain, procID, x, y, z, vx, vy, vz,
+                         particleMass, w, coords)
+        k += 1
+    end
   end
 end
-=#
 
 function insert_new_particles(domain::Block, body::MeshBody, coords)
  procID = 0
