@@ -178,12 +178,12 @@ end
 
 
 function save_particles(fileName)
-    println("saving particles to file")
+    #println("saving particles to file")
     oFile = open(fileName, "w")
     write(oFile, "x,y,z,vx,vy,vz,cellID\n")
     data2CSV(domain, oFile)
     close(oFile)
-    println("done!")
+    #println("done!")
 end
 
 function data2CSV(domain, oFile)

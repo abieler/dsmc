@@ -1,6 +1,6 @@
 function insert_new_particles(domain::Block, coords)
  N = 5000
- R = 260.0
+ R = 150.0
  procID = 0
  w = 1.0
  particleMass = 18
@@ -12,35 +12,13 @@ function insert_new_particles(domain::Block, coords)
    x = R * cos(theta) * sin(phi)
    y = R * sin(theta) * sin(phi)
    z = R * cos(phi)
-   vx = -x * 10
-   vy = -y * 10
-   vz = -z * 10
+   vx = -x * 5
+   vy = -y * 5
+   vz = -z * 5
    assign_particle!(domain, procID, x, y, z, vx, vy, vz,
                     particleMass, w, coords)
  end
 end
-
-#=
-function insert_new_particles(domain::Block, coords)
-  k = 0
-  for j in 1:5
-    for i in 1:100
-        procID = 0
-        w = 1.0
-        particleMass = 18
-        x = 400.0 + 20 * randn()
-        y = 0.0 +  3 * randn()
-        z = 0.0
-        vx = -5000.0
-        vy = 0.0
-        vz = 0.0
-        assign_particle!(domain, procID, x, y, z, vx, vy, vz,
-                         particleMass, w, coords)
-        k += 1
-    end
-  end
-end
-=#
 
 function insert_new_particles(domain::Block, body::MeshBody, coords)
  procID = 0
@@ -153,6 +131,12 @@ function move!(cell::Cell, dt)
 end
 
 function gas_surface_collisions!(cell::Cell, dt)
+  nowpos = zeros(Float64,3)
+  nextpos = similar(nowpos)
+  pI = similar(nowpos)
+  u = similar(nowpos)
+  v = similar(nowpos)
+  w = similar(nowpos)
   for i in cell.particles.nParticles
     for k =1:3
       nowpos[k] = 0.0
@@ -174,6 +158,7 @@ function gas_surface_collisions!(cell::Cell, dt)
     if iTri != -1
       println("r_old       : ", sqrt(nowpos[1]^2 + nowpos[2]^2 + nowpos[3]^2))
       println("collision! r: ", sqrt(pIntersect[1]^2 + pIntersect[2]^2 + pIntersect[3]^2))
+      println("r_next       : ", sqrt(nextpos[1]^2 + nextpos[2]^2 + nextpos[3]^2))
       println("  ")
 
       cell.particles.x[i] = pIntersect[1]
@@ -183,7 +168,7 @@ function gas_surface_collisions!(cell::Cell, dt)
       cell.particles.vx[i] = 0.0
       cell.particles.vy[i] = 0.0
       cell.particles.vz[i] = 0.0
-      data2CSV(cell.particles, i)
+      #data2CSV(cell.particles, i)
     else
       cell.particles.x[i] = cell.particles.x[i] + dt * cell.particles.vx[i]
       cell.particles.y[i] = cell.particles.y[i] + dt * cell.particles.vy[i]
