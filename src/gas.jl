@@ -1,8 +1,6 @@
-
-#=
 function insert_new_particles(domain::Block, coords)
- N = 500
- R = 10.0
+ N = 5000
+ R = 260.0
  procID = 0
  w = 1.0
  particleMass = 18
@@ -11,19 +9,18 @@ function insert_new_particles(domain::Block, coords)
  for i=1:N
    theta = 2.0 * pi * rand()
    phi = acos(2.0 * rand() - 1.0)
-   x = 800.0 + R * cos(theta) * sin(phi)
+   x = R * cos(theta) * sin(phi)
    y = R * sin(theta) * sin(phi)
-   z = 20.0 + R * cos(phi)
-   vx = -5000.0
-   vy = 0.0
-   vz = 0.0
+   z = R * cos(phi)
+   vx = -x * 10
+   vy = -y * 10
+   vz = -z * 10
    assign_particle!(domain, procID, x, y, z, vx, vy, vz,
                     particleMass, w, coords)
  end
 end
-=#
 
-
+#=
 function insert_new_particles(domain::Block, coords)
   k = 0
   for j in 1:5
@@ -31,7 +28,7 @@ function insert_new_particles(domain::Block, coords)
         procID = 0
         w = 1.0
         particleMass = 18
-        x = 400.0 + 20 * randn() 
+        x = 400.0 + 20 * randn()
         y = 0.0 +  3 * randn()
         z = 0.0
         vx = -5000.0
@@ -43,6 +40,7 @@ function insert_new_particles(domain::Block, coords)
     end
   end
 end
+=#
 
 function insert_new_particles(domain::Block, body::MeshBody, coords)
  procID = 0
@@ -147,8 +145,7 @@ end
 
 function move!(cell::Cell, dt)
   if length(cell.triangles) > 0
-    #gas_surface_collisions!(cell, dt)
-    #println("checked for coll")
+    gas_surface_collisions!(cell, dt)
     move!(cell.particles, dt)
   else
     move!(cell.particles, dt)
@@ -295,9 +292,8 @@ function send_particles_to_cpu(lostParticles)
   if MyID > 1
     doSend = (MyID in workers()) & (lostParticles.nParticles > 0)
     if doSend == true
-      lostIDs = lostParticles.procID
+      lostIDs = lostParticles.procID[1:lostParticles.nParticles]
       uniqueIDs = unique(lostIDs)
-      splice!(uniqueIDs, findfirst(uniqueIDs, 0))
       #println("sending ", lostParticles.nParticles, " to iprocs: ", uniqueIDs)
       @sync begin
         for iProc in uniqueIDs
