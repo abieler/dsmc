@@ -41,21 +41,10 @@ println("distribute it done")
 
 @everywhere const nParticles = mySettings.nNewParticlesPerIteration
 @everywhere const f = nParticles / surfaceArea
-#=
-for kk in 1:100
-  @everywhere x1 = -200.0 + randn() * 200.
-  @everywhere x2 = -200.0 + randn() * 200.
-  @everywhere x3 = -200.0 + randn() * 200.
-  @everywhere coords = [x1,x2,x3]
-  @everywhere cell_containing_point(domain, coords)
-end
-=#
 
 ################################################################################
 # main loop
 ################################################################################
-#@everywhere const nParticles = mySettings.nNewParticlesPerIteration
-#@everywhere const f = nParticles / surfaceArea
 @time begin
   for iteration = 0:mySettings.nIterations
     if iteration < 1
