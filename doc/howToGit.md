@@ -39,6 +39,16 @@
   ```
   git checkout filename
   ```
+  
+#### undo changes to last pull
+If you are unhappy with changes that you did and want to go back to the state
+of the last pull just do:
+
+```
+git checkout filename
+```
+
+This will again pull a copy from the repository and replace your local file.
 
 
 #### creating a new branch:
