@@ -2,13 +2,6 @@
 using DSMC
 @everywhere using DSMC
 
-function sendtosimple(iProc, nm, val)
-  @spawnat(iProc, (Main, Expr(:(=), $nm, $val)))
-end
-
-macro sendto(iProc, nm, val)
-  return :(sendtosimple($iProc, $nm, $var))
-end
 
 @everywhere S = SphericalBody(128.0, 1e24, 3000.0, 250.0,[500],[18],[1e20])
 ################################################################################
